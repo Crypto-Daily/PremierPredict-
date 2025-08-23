@@ -9,7 +9,7 @@ app.use(bodyParser.json());
 
 // PostgreSQL connection (Render provides DATABASE_URL)
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: "postgresql://premierpredict_user:scdeLsN9rmFEbBxVPOVffIcQTOblozia@dpg-d2kth5ruibrs73ekv59g-a.frankfurt-postgres.render.com/premierpredict",
   ssl: { rejectUnauthorized: false },
 });
 
