@@ -2,14 +2,11 @@ import express from "express";
 import pkg from "pg";
 import dotenv from "dotenv";
 import crypto from "crypto";
-import fetch from "node-fetch"; // ✅ Import fetch for Node.js
 
 dotenv.config();
 const { Pool } = pkg;
 
 const app = express();
-
-// ✅ Parse JSON normally
 app.use(express.json());
 
 // ✅ Database connection
@@ -39,10 +36,6 @@ app.post("/pay", async (req, res) => {
   try {
     const { email, amount } = req.body;
 
-    if (!email || !amount) {
-      return res.status(400).json({ error: "Email and amount are required" });
-    }
-
     const response = await fetch("https://api.paystack.co/transaction/initialize", {
       method: "POST",
       headers: {
@@ -51,7 +44,7 @@ app.post("/pay", async (req, res) => {
       },
       body: JSON.stringify({
         email,
-        amount: amount * 100, // Paystack expects amount in kobo
+        amount: amount * 100, // Paystack expects kobo
       }),
     });
 
@@ -63,14 +56,43 @@ app.post("/pay", async (req, res) => {
   }
 });
 
+// ✅ Paystack Webhook
+app.post("/webhook", (req, res) => {
+  const signature = req.headers["x-paystack-signature"];
+  if (!signature) {
+    return res.status(401).send("No signature header found");
+  }
+
+  // Verify signature
+  const hash = crypto
+    .createHmac("sha512", process.env.PAYSTACK_SECRET_KEY)
+    .update(JSON.stringify(req.body))
+    .digest("hex");
+
+  if (hash !== signature) {
+    return res.status(401).send("Invalid signature");
+  }
+
+  // ✅ Process webhook event
+  const event = req.body.event;
+  console.log("✅ Webhook received:", event);
+
+  // Example: Save successful payment to DB
+  if (event === "charge.success") {
+    const { reference, amount, customer } = req.body.data;
+    pool.query(
+      "INSERT INTO payments(reference, amount, email) VALUES($1, $2, $3)",
+      [reference, amount, customer.email]
+    ).catch(err => console.error("DB insert error:", err));
+  }
+
+  res.sendStatus(200);
+});
+
 // ✅ Verify Paystack payment & save ticket
 app.post("/verify-payment", async (req, res) => {
   try {
     const { reference, selections, phone } = req.body;
-
-    if (!reference || !phone || !selections) {
-      return res.status(400).json({ success: false, message: "Missing required fields" });
-    }
 
     // 1️⃣ Verify with Paystack
     const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
@@ -106,40 +128,6 @@ app.post("/verify-payment", async (req, res) => {
   } catch (err) {
     console.error("❌ Verify-payment error:", err);
     res.status(500).json({ success: false, message: "Server error" });
-  }
-});
-
-// ✅ Paystack Webhook
-app.post("/webhook", (req, res) => {
-  try {
-    const signature = req.headers["x-paystack-signature"];
-    if (!signature) {
-      return res.status(401).send("No signature header found");
-    }
-
-    // Verify signature
-    const hash = crypto
-      .createHmac("sha512", process.env.PAYSTACK_SECRET_KEY)
-      .update(JSON.stringify(req.body))
-      .digest("hex");
-
-    if (hash !== signature) {
-      return res.status(401).send("Invalid signature");
-    }
-
-    const event = req.body.event;
-    console.log("✅ Webhook received:", event);
-
-    // Example: Log successful payment
-    if (event === "charge.success") {
-      const { reference, amount, customer } = req.body.data;
-      console.log(`💰 Payment success: ${reference} - ${amount} by ${customer.email}`);
-    }
-
-    res.sendStatus(200);
-  } catch (err) {
-    console.error("❌ Webhook error:", err);
-    res.status(500).send("Webhook error");
   }
 });
 
