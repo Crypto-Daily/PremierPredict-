@@ -1,137 +1,96 @@
-// server.js
 import express from "express";
-import bodyParser from "body-parser";
-import crypto from "crypto";
 import pkg from "pg";
+import dotenv from "dotenv";
+import crypto from "crypto";
+
+dotenv.config();
 const { Pool } = pkg;
 
 const app = express();
-app.use(bodyParser.json());
+app.use(express.json());
 
-// ✅ PostgreSQL connection (Render provides DATABASE_URL in env)
+// ✅ Database connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
 });
 
-// ✅ Create table if not exists
-const initDB = async () => {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS payments (
-      id SERIAL PRIMARY KEY,
-      phone_number VARCHAR(20),
-      amount BIGINT,
-      ticket_id VARCHAR(100) UNIQUE,
-      ticket_password VARCHAR(100),
-      selected_games JSONB,
-      created_at TIMESTAMP DEFAULT NOW()
-    );
-  `);
-};
+// ✅ Test DB connection
+async function initDB() {
+  try {
+    await pool.connect();
+    console.log("📦 Connected to PostgreSQL");
+  } catch (err) {
+    console.error("❌ Database connection error", err);
+  }
+}
 initDB();
 
-// ✅ Paystack Webhook
-app.post("/paystack/webhook", async (req, res) => {
+// ✅ Home route
+app.get("/", (req, res) => {
+  res.send("PremierPredict backend is live 🚀");
+});
+
+// ✅ Start Paystack payment
+app.post("/pay", async (req, res) => {
   try {
-    const secret = process.env.PAYSTACK_SECRET_KEY;
-    if (!secret) {
-      console.error("❌ PAYSTACK_SECRET_KEY is missing in environment!");
-      return res.sendStatus(500);
-    }
+    const { email, amount } = req.body;
 
-    // 1. Verify Paystack Signature
-    const hash = crypto
-      .createHmac("sha512", secret)
-      .update(JSON.stringify(req.body))
-      .digest("hex");
+    const response = await fetch("https://api.paystack.co/transaction/initialize", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email,
+        amount: amount * 100, // Paystack expects kobo
+      }),
+    });
 
-    if (hash !== req.headers["x-paystack-signature"]) {
-      return res.status(401).send("Invalid signature");
-    }
-
-    // 2. Process payment event
-    const event = req.body;
-    if (event.event === "charge.success") {
-      const { customer, amount, metadata } = event.data;
-
-      const selectedGames = metadata?.selectedGames || [];
-      const phoneNumber = customer.phone || "unknown";
-
-      // 3. Generate ticket + password
-      const ticketId = "TICKET-" + Date.now().toString(36);
-      const ticketPassword = crypto.randomBytes(4).toString("hex");
-
-      // 4. Save payment to DB
-      await pool.query(
-        "INSERT INTO payments (phone_number, amount, ticket_id, ticket_password, selected_games) VALUES ($1, $2, $3, $4, $5)",
-        [phoneNumber, amount, ticketId, ticketPassword, JSON.stringify(selectedGames)]
-      );
-
-      console.log(`✅ Payment saved: Phone=${phoneNumber} | Ticket=${ticketId}`);
-    }
-
-    res.sendStatus(200); // ✅ Always acknowledge webhook
-  } catch (error) {
-    console.error("Webhook Error:", error);
-    res.sendStatus(500);
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Payment initialization failed");
   }
 });
 
-// ✅ Root route for testing
-app.get("/", (req, res) => {
-  res.send("🎉 PremierPredict Backend is Live!");
-});
-
-// ✅ Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));  try {
-    // 1. Verify Paystack signature
-    const hash = crypto
-      .createHmac("sha512", process.env.PAYSTACK_SECRET_KEY)
-      .update(req.body)
-      .digest("hex");
-
-    if (hash !== req.headers["x-paystack-signature"]) {
-      return res.status(401).send("Invalid signature");
-    }
-
-    // 2. Parse event
-    const event = JSON.parse(req.body.toString());
-
-    if (event.event === "charge.success") {
-      const { customer, amount, metadata } = event.data;
-
-      // Metadata should hold phone + selected games
-      const phoneNumber = metadata?.phone || "unknown";
-      const selectedGames = metadata?.selectedGames || [];
-
-      // 3. Generate unique ticket + password
-      const ticketId = "TICKET-" + crypto.randomBytes(6).toString("hex");
-      const ticketPassword = crypto.randomBytes(4).toString("hex");
-
-      // 4. Save to database
-      await pool.query(
-        "INSERT INTO payments (phone_number, amount, ticket_id, ticket_password, selected_games) VALUES ($1, $2, $3, $4, $5)",
-        [phoneNumber, amount, ticketId, ticketPassword, JSON.stringify(selectedGames)]
-      );
-
-      console.log(
-        `✅ Payment saved | Phone: ${phoneNumber} | Ticket: ${ticketId} | Games: ${JSON.stringify(selectedGames)}`
-      );
-    }
-
-    res.sendStatus(200); // ✅ Always acknowledge
-  } catch (error) {
-    console.error("Webhook Error:", error);
-    res.sendStatus(500);
+// ✅ Paystack Webhook (very important)
+app.post("/webhook", (req, res) => {
+  const signature = req.headers["x-paystack-signature"];
+  if (!signature) {
+    return res.status(401).send("No signature header found");
   }
-});
 
-// ✅ Root route for testing
-app.get("/", (req, res) => {
-  res.send("🎉 PremierPredict Backend is Live!");
+  // Verify signature
+  const hash = crypto
+    .createHmac("sha512", process.env.PAYSTACK_SECRET_KEY)
+    .update(JSON.stringify(req.body))
+    .digest("hex");
+
+  if (hash !== signature) {
+    return res.status(401).send("Invalid signature");
+  }
+
+  // ✅ Process webhook event
+  const event = req.body.event;
+  console.log("✅ Webhook received:", event);
+
+  // Example: Save successful payment to DB
+  if (event === "charge.success") {
+    const { reference, amount, customer } = req.body.data;
+    pool.query(
+      "INSERT INTO payments(reference, amount, email) VALUES($1, $2, $3)",
+      [reference, amount, customer.email]
+    ).catch(err => console.error("DB insert error:", err));
+  }
+
+  res.sendStatus(200);
 });
 
 // ✅ Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
