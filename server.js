@@ -94,3 +94,44 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
+// ✅ Verify Paystack payment & save ticket
+app.post("/verify-payment", async (req, res) => {
+  try {
+    const { reference, selections, phone } = req.body;
+
+    // 1️⃣ Verify with Paystack
+    const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const data = await response.json();
+    if (!data.status || data.data.status !== "success") {
+      return res.json({ success: false, message: "Payment not verified" });
+    }
+
+    // 2️⃣ Generate Ticket ID & Password
+    const ticketID = "TICKET-" + crypto.randomBytes(3).toString("hex").toUpperCase();
+    const password = crypto.randomBytes(4).toString("hex");
+
+    // 3️⃣ Save to DB
+    await pool.query(
+      "INSERT INTO tickets(ticket_id, password, phone, selections, reference, amount) VALUES($1,$2,$3,$4,$5,$6)",
+      [ticketID, password, phone, JSON.stringify(selections), reference, data.data.amount]
+    );
+
+    // 4️⃣ Send response to frontend
+    res.json({
+      success: true,
+      ticketID,
+      password,
+    });
+
+  } catch (err) {
+    console.error("❌ Verify-payment error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
