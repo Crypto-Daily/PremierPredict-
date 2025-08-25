@@ -1,62 +1,57 @@
-// server.js
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
-import pkg from "pg";
 import dotenv from "dotenv";
+import fetch from "node-fetch";
 
 dotenv.config();
-const { Pool } = pkg;
 
 const app = express();
-const PORT = process.env.PORT || 10000;
-
-// Middleware
 app.use(cors());
 app.use(bodyParser.json());
 
-// Database connection
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-});
+const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY; // put your sk_test / sk_live key in Render env
 
-// API route to create ticket
-app.post("/api/tickets", async (req, res) => {
+// Payment route
+app.post("/api/pay", async (req, res) => {
   try {
-    const { phone, selections, amount } = req.body;
+    const { phone, selections } = req.body;
 
-    if (!phone || !selections) {
-      return res.status(400).json({ status: "error", message: "Phone and selections are required" });
+    // FIXED amount = ₦100 (Paystack expects kobo → 100 * 100 = 10000)
+    const amount = 100 * 100;
+
+    // Initialize Paystack payment
+    const response = await fetch("https://api.paystack.co/transaction/initialize", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${PAYSTACK_SECRET}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: `${phone}@premierpredict.com`, // fake email since no email collected
+        amount,
+        metadata: {
+          phone,
+          selections,
+        },
+        callback_url: "https://premierpredict.onrender.com/success.html", // redirect here after payment
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!data.status) {
+      return res.status(400).json({ error: data.message });
     }
 
-    // Generate random ticket + reference
-    const ticket_id = "TICKET-" + Math.random().toString(36).substr(2, 9).toUpperCase();
-    const reference = "REF-" + Date.now();
-
-    const query = `
-      INSERT INTO tickets (ticket_id, phone, selections, reference, amount, created_at)
-      VALUES ($1, $2, $3, $4, $5, NOW())
-      RETURNING *;
-    `;
-
-    const values = [ticket_id, phone, selections, reference, amount || 100];
-
-    const result = await pool.query(query, values);
-
-    res.json({ status: "success", ticket: result.rows[0] });
-
-  } catch (err) {
-    console.error("❌ Ticket creation failed:", err);
-    res.status(500).json({ status: "error", message: "Server misconfiguration. Check logs." });
+    // Send URL to frontend
+    res.json({ authorization_url: data.data.authorization_url });
+  } catch (error) {
+    console.error("Payment init error:", error);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
-// Health check
-app.get("/", (req, res) => {
-  res.send("✅ PremierPredict API is running");
-});
-
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+// Port binding
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log(`Server running on ${PORT}`));
