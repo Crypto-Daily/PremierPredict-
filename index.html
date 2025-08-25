@@ -1,139 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Premier Predict - Matchday 2</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+  <meta charset="UTF-8">
+  <title>PremierPredict Lottery</title>
   <style>
-    :root {
-      --bg: #f5f7fa;
-      --card: #ffffff;
-      --text: #111827;
-      --muted: #6b7280;
-      --primary: #2563eb;
-      --primary-dark: #1d4ed8;
-      --border: #e5e7eb;
-    }
-    * { box-sizing: border-box; }
     body {
       font-family: 'Poppins', sans-serif;
-      background: var(--bg);
-      color: var(--text);
+      background: linear-gradient(135deg, #4facfe, #00f2fe);
       margin: 0;
-      padding: 24px;
-    }
-    .card {
-      background: var(--card);
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 24px;
-      border-radius: 16px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-    }
-    h1 {
-      margin: 0 0 8px;
-      text-align: center;
-      font-weight: 600;
-    }
-    p.sub {
-      margin: 0 0 24px;
-      text-align: center;
-      color: var(--muted);
-      font-size: 14px;
-    }
-    .field {
-      margin-bottom: 16px;
-    }
-    label.block {
-      display: block;
-      font-size: 14px;
-      margin-bottom: 6px;
-      color: var(--muted);
-    }
-    input[type="text"], input[type="number"] {
-      width: 100%;
-      padding: 12px 14px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      outline: none;
-      font-size: 16px;
-    }
-    .fixture {
-      padding: 14px 0;
-      border-bottom: 1px solid var(--border);
-    }
-    .fixture:last-child { border-bottom: 0; }
-    .fixture-title {
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-    .options {
+      padding: 0;
       display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-    .opt {
-      display: inline-flex;
-      gap: 6px;
+      justify-content: center;
       align-items: center;
-      font-size: 14px;
-      padding: 6px 10px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
+      height: 100vh;
+    }
+
+    .container {
       background: #fff;
-      cursor: pointer;
-    }
-    .error {
-      color: #dc2626;
-      font-size: 14px;
-      margin-top: 8px;
-      min-height: 20px;
-    }
-    button {
-      background: var(--primary);
-      color: white;
+      padding: 25px 35px;
+      border-radius: 15px;
+      box-shadow: 0px 8px 20px rgba(0,0,0,0.1);
       width: 100%;
-      border: 0;
-      padding: 14px;
-      border-radius: 12px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background .2s ease;
-      margin-top: 8px;
+      max-width: 420px;
     }
-    button:hover { background: var(--primary-dark); }
-    button:disabled { background: #9ca3af; cursor: not-allowed; }
+
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    label {
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: block;
+      color: #444;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+    }
+
+    button {
+      background: #4facfe;
+      color: #fff;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #00c6fb;
+    }
+
+    .matches {
+      margin-bottom: 15px;
+    }
+
+    .match {
+      display: flex;
+      justify-content: space-between;
+      margin: 8px 0;
+    }
+
+    .match label {
+      flex: 1;
+    }
+
+    .radio-group {
+      display: flex;
+      gap: 10px;
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Premier League — Matchday 2</h1>
-    <p class="sub">Pick the outcome for all 10 fixtures</p>
+  <div class="container">
+    <h1>PremierPredict</h1>
+    <form id="lotteryForm">
+      <label for="phone">Phone Number</label>
+      <input type="text" id="phone" name="phone" placeholder="Enter your phone number" required>
 
-    <form id="lotteryForm" novalidate>
-      <div class="field">
-        <label for="phone" class="block">Phone Number</label>
-        <input id="phone" type="text" placeholder="e.g. 08012345678" />
-      </div>
+      <div class="matches" id="matches"></div>
 
-      <div class="field">
-        <label for="amount" class="block">Amount (₦)</label>
-        <input id="amount" type="number" placeholder="Enter stake amount" />
-      </div>
-
-      <div id="fixtures"></div>
-
-      <div id="error" class="error"></div>
-
-      <button id="submitBtn" type="submit">Submit Ticket</button>
+      <button type="submit">Play Now - ₦100</button>
     </form>
   </div>
 
   <script>
-    const API_URL = "https://premierpredict.onrender.com/tickets";
-    const PUBLIC_API_KEY = "pk_live_275047104ef6b1006ee0daf80f3507700cc18943";
-
     const fixtures = [
       "Nottingham Forest vs Bournemouth",
       "Liverpool vs Brentford",
@@ -147,85 +106,51 @@
       "Leicester vs Burnley"
     ];
 
-    const fixturesDiv = document.getElementById("fixtures");
-
-    // Render fixtures with neatly aligned radio options
-    fixtures.forEach((match, i) => {
-      const wrapper = document.createElement("div");
-      wrapper.className = "fixture";
-      wrapper.innerHTML = `
-        <div class="fixture-title">${match}</div>
-        <div class="options">
-          <label class="opt"><input type="radio" name="fixture-${i}" value="Home"> Home</label>
-          <label class="opt"><input type="radio" name="fixture-${i}" value="Draw"> Draw</label>
-          <label class="opt"><input type="radio" name="fixture-${i}" value="Away"> Away</label>
+    const matchesDiv = document.getElementById("matches");
+    fixtures.forEach((match, index) => {
+      matchesDiv.innerHTML += `
+        <div class="match">
+          <label>${match}</label>
+          <div class="radio-group">
+            <label><input type="radio" name="match${index}" value="Home" required> Home</label>
+            <label><input type="radio" name="match${index}" value="Away"> Away</label>
+            <label><input type="radio" name="match${index}" value="Draw"> Draw</label>
+          </div>
         </div>
       `;
-      fixturesDiv.appendChild(wrapper);
     });
 
     document.getElementById("lotteryForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const errorDiv = document.getElementById("error");
-      const submitBtn = document.getElementById("submitBtn");
-      errorDiv.textContent = "";
 
-      const phone = document.getElementById("phone").value.trim();
-      const amount = Number(document.getElementById("amount").value.trim());
-
-      // Phone (Nigeria) validation
-      const phoneRegex = /^(?:\+234|0)[789][01]\d{8}$/;
-      if (!phoneRegex.test(phone)) {
-        errorDiv.textContent = "Please enter a valid Nigerian phone number.";
-        return;
-      }
-
-      if (!Number.isFinite(amount) || amount <= 0) {
-        errorDiv.textContent = "Please enter a valid amount greater than 0.";
-        return;
-      }
-
-      // Collect and validate selections (must be 10)
+      const phone = document.getElementById("phone").value;
       const selections = {};
-      for (let i = 0; i < fixtures.length; i++) {
-        const choice = document.querySelector(`input[name="fixture-${i}"]:checked`);
-        if (!choice) {
-          errorDiv.textContent = "Please make a prediction for all 10 matches.";
-          return;
-        }
-        selections[i] = choice.value;
-      }
 
-      // Submit
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Submitting...";
+      fixtures.forEach((_, index) => {
+        const selected = document.querySelector(`input[name="match${index}"]:checked`);
+        selections[index] = selected ? selected.value : null;
+      });
+
+      const data = { phone, selections, amount: 100 };
 
       try {
-        const res = await fetch(API_URL, {
+        const response = await fetch("https://premierpredict.onrender.com/api/tickets", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": PUBLIC_API_KEY
-          },
-          body: JSON.stringify({ phone, amount, selections })
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
         });
 
-        const data = await res.json();
-
-        if (!res.ok || !data.success) {
-          errorDiv.textContent = data.error || "Something went wrong. Please try again.";
+        const result = await response.json();
+        if (result.status === "success") {
+          alert(`✅ Ticket created!\nID: ${result.ticket.ticket_id}\nReference: ${result.ticket.reference}`);
         } else {
-          alert(`🎉 Ticket created!\nTicket ID: ${data.ticket_id}\nAmount: ₦${data.amount}`);
-          document.getElementById("lotteryForm").reset();
+          alert("❌ Error: " + result.message);
         }
       } catch (err) {
+        alert("⚠️ Server error. Try again later.");
         console.error(err);
-        errorDiv.textContent = "Network error. Please try again.";
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Submit Ticket";
       }
     });
   </script>
 </body>
-  </html>
+</html>
