@@ -1,138 +1,82 @@
 import express from "express";
-import pkg from "pg";
+import bodyParser from "body-parser";
+import cors from "cors";
 import dotenv from "dotenv";
+import pkg from "pg";
 import crypto from "crypto";
 
 dotenv.config();
 const { Pool } = pkg;
 
 const app = express();
-app.use(express.json());
+const PORT = process.env.PORT || 10000;
 
-// ✅ Database connection
+// Middleware
+app.use(cors());
+app.use(bodyParser.json());
+
+// Postgres connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+  ssl: { rejectUnauthorized: false }
 });
 
-// ✅ Test DB connection
-async function initDB() {
-  try {
-    await pool.connect();
-    console.log("📦 Connected to PostgreSQL");
-  } catch (err) {
-    console.error("❌ Database connection error", err);
-  }
+// Helper: generate Ticket ID
+function generateTicketId() {
+  return "TICKET-" + crypto.randomBytes(4).toString("hex").toUpperCase();
 }
-initDB();
 
-// ✅ Home route
-app.get("/", (req, res) => {
-  res.send("PremierPredict backend is live 🚀");
-});
-
-// ✅ Start Paystack payment
-app.post("/pay", async (req, res) => {
+// ✅ API route to create ticket
+app.post("/tickets", async (req, res) => {
   try {
-    const { email, amount } = req.body;
-
-    const response = await fetch("https://api.paystack.co/transaction/initialize", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email,
-        amount: amount * 100, // Paystack expects kobo
-      }),
-    });
-
-    const data = await response.json();
-    res.json(data);
-  } catch (err) {
-    console.error("❌ Payment init error:", err);
-    res.status(500).send("Payment initialization failed");
-  }
-});
-
-// ✅ Paystack Webhook
-app.post("/webhook", (req, res) => {
-  const signature = req.headers["x-paystack-signature"];
-  if (!signature) {
-    return res.status(401).send("No signature header found");
-  }
-
-  // Verify signature
-  const hash = crypto
-    .createHmac("sha512", process.env.PAYSTACK_SECRET_KEY)
-    .update(JSON.stringify(req.body))
-    .digest("hex");
-
-  if (hash !== signature) {
-    return res.status(401).send("Invalid signature");
-  }
-
-  // ✅ Process webhook event
-  const event = req.body.event;
-  console.log("✅ Webhook received:", event);
-
-  // Example: Save successful payment to DB
-  if (event === "charge.success") {
-    const { reference, amount, customer } = req.body.data;
-    pool.query(
-      "INSERT INTO payments(reference, amount, email) VALUES($1, $2, $3)",
-      [reference, amount, customer.email]
-    ).catch(err => console.error("DB insert error:", err));
-  }
-
-  res.sendStatus(200);
-});
-
-// ✅ Verify Paystack payment & save ticket
-app.post("/verify-payment", async (req, res) => {
-  try {
-    const { reference, selections, phone } = req.body;
-
-    // 1️⃣ Verify with Paystack
-    const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    const data = await response.json();
-    if (!data.status || data.data.status !== "success") {
-      return res.json({ success: false, message: "Payment not verified" });
+    const apiKey = req.headers["x-api-key"];
+    if (apiKey !== process.env.API_KEY) {
+      return res.status(403).json({ error: "Invalid API key" });
     }
 
-    // 2️⃣ Generate Ticket ID & Password
-    const ticketID = "TICKET-" + crypto.randomBytes(3).toString("hex").toUpperCase();
-    const password = crypto.randomBytes(4).toString("hex");
+    const { phone, amount, selections } = req.body;
 
-    // 3️⃣ Save to DB
-    await pool.query(
-      "INSERT INTO tickets(ticket_id, password, phone, selections, reference, amount) VALUES($1,$2,$3,$4,$5,$6)",
-      [ticketID, password, phone, JSON.stringify(selections), reference, data.data.amount]
+    // ✅ Validation
+    const phoneRegex = /^(?:\+234|0)[789][01]\d{8}$/;
+    if (!phone || !phoneRegex.test(phone)) {
+      return res.status(400).json({ error: "Invalid Nigerian phone number" });
+    }
+    if (!amount || isNaN(amount) || amount <= 0) {
+      return res.status(400).json({ error: "Invalid amount" });
+    }
+    if (!selections || Object.keys(selections).length !== 10) {
+      return res.status(400).json({ error: "You must make predictions for all matches" });
+    }
+
+    const ticketId = generateTicketId();
+    const reference = "REF_" + crypto.randomBytes(3).toString("hex").toUpperCase();
+
+    const result = await pool.query(
+      `INSERT INTO tickets (ticket_id, phone, selections, reference, amount, created_at)
+       VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING *`,
+      [ticketId, phone, selections, reference, amount]
     );
 
-    // 4️⃣ Send response to frontend
-    res.json({
+    return res.json({
       success: true,
-      ticketID,
-      password,
+      ticket_id: ticketId,
+      reference,
+      amount,
+      phone,
+      created_at: result.rows[0].created_at
     });
 
   } catch (err) {
-    console.error("❌ Verify-payment error:", err);
-    res.status(500).json({ success: false, message: "Server error" });
+    console.error("❌ Server error:", err);
+    res.status(500).json({ error: "Server error. Please try again later." });
   }
 });
 
-// ✅ Start server
-const PORT = process.env.PORT || 10000;
+// Health check
+app.get("/", (req, res) => {
+  res.send("✅ PremierPredict API is running");
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
