@@ -151,6 +151,35 @@
         console.error(err);
       }
     });
-  </script>
+    
+document.getElementById("lotteryForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const phone = document.getElementById("phone").value;
+  const selections = {};
+  document.querySelectorAll("input[type=radio]:checked").forEach((input, idx) => {
+    selections[idx] = input.value;
+  });
+
+  try {
+    const res = await fetch("https://premierpredict.onrender.com/api/pay", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone, selections }),
+    });
+
+    const data = await res.json();
+
+    if (data.authorization_url) {
+      // ✅ Redirect to Paystack payment page
+      window.location.href = data.authorization_url;
+    } else {
+      alert("Payment failed: " + data.error);
+    }
+  } catch (err) {
+    alert("Server error, please try again.");
+  }
+});
+</script>
 </body>
 </html>
