@@ -42,6 +42,15 @@
     }
   </style>
 </head>
+  <p id="ticketMsg">Thank you for playing Premier Predict. Your ticket has been recorded.</p>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const ticket = params.get("ticket");
+  if (ticket) {
+    document.getElementById("ticketMsg").innerText =
+      "✅ Payment successful! Your Ticket ID: " + ticket;
+  }
 <body>
   <div class="container">
     <h1>✅ Payment Successful!</h1>
@@ -50,4 +59,5 @@
     <a href="index.html">Play Again</a>
   </div>
 </body>
+    </script>
 </html>
