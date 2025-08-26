@@ -11,6 +11,7 @@
       justify-content: center;
       align-items: center;
       height: 100vh;
+      margin: 0;
     }
     .container {
       background: #fff;
@@ -85,7 +86,7 @@
       const match = document.getElementById("match").value;
 
       try {
-        const res = await fetch("https://your-backend-url.onrender.com/create-payment", {
+        const res = await fetch("https://premierpredict.onrender.com/create-payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ phone, match })
@@ -96,7 +97,7 @@
         if (data.url) {
           window.location.href = data.url; // redirect to Paystack checkout
         } else {
-          alert("Error: " + data.error);
+          alert("Error: " + (data.error || "Payment failed"));
         }
       } catch (err) {
         alert("Server error. Try again.");
