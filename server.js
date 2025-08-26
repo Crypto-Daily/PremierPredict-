@@ -72,3 +72,46 @@ app.get("/verify-payment/:reference", async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+// Generate ticket ID (example: PRE12345678)
+function generateTicketId() {
+  return "PRE" + Math.floor(10000000 + Math.random() * 90000000);
+}
+
+app.post("/create-payment", async (req, res) => {
+  try {
+    const { phone, match } = req.body;
+
+    if (!phone || !match) {
+      return res.status(400).json({ error: "Phone and match are required" });
+    }
+
+    const amount = 100 * 100;
+    const ticketId = generateTicketId(); // ✅ create ticket
+
+    const response = await fetch("https://api.paystack.co/transaction/initialize", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: `${phone}@premierpredict.com`,
+        amount,
+        callback_url: `https://crypto-daily.github.io/PremierPredict-/success.html?ticket=${ticketId}`,
+        metadata: { phone, match, ticketId }, // ✅ store ticket in Paystack metadata
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!data.status) {
+      console.error("❌ Paystack init failed:", data);
+      return res.status(400).json({ error: data.message || "Paystack error" });
+    }
+
+    res.json({ url: data.data.authorization_url });
+  } catch (error) {
+    console.error("❌ Payment error:", error.message, error.stack);
+    res.status(500).json({ error: "Server error creating payment" });
+  }
+});
