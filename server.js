@@ -32,7 +32,7 @@ app.post("/create-payment", async (req, res) => {
       body: JSON.stringify({
         email: `${phone}@premierpredict.com`, // fake email since Paystack requires it
         amount,
-        callback_url: "https://premierpredict.onrender.com/success.html", // ✅ change to your deployed success page
+        callback_url: "https://crypto-daily.github.io/PremierPredict-/success.html", // ✅ change to your deployed success page
         metadata: { phone, match },
       }),
     });
