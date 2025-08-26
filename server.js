@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
-import fetch from "node-fetch";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -15,6 +14,10 @@ app.post("/create-payment", async (req, res) => {
   try {
     const { phone, match } = req.body;
 
+    if (!phone || !match) {
+      return res.status(400).json({ error: "Phone and match are required" });
+    }
+
     // fixed amount (₦100 = 10000 kobo)
     const amount = 100 * 100;
 
@@ -26,9 +29,9 @@ app.post("/create-payment", async (req, res) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        email: `${phone}@premierpredict.com`, // Paystack requires email, we fake with phone
+        email: `${phone}@premierpredict.com`, // Paystack requires email, fake with phone
         amount,
-        callback_url: "https://yourdomain.com/success.html", // change to your deployed frontend success page
+        callback_url: "https://premierpredict.onrender.com/success.html", // ✅ change to your actual deployed success page
         metadata: {
           phone,
           match,
@@ -39,12 +42,13 @@ app.post("/create-payment", async (req, res) => {
     const data = await response.json();
 
     if (!data.status) {
+      console.error("Paystack init failed:", data);
       return res.status(400).json({ error: data.message });
     }
 
     res.json({ url: data.data.authorization_url });
   } catch (error) {
-    console.error(error);
+    console.error("Payment error:", error);
     res.status(500).json({ error: "Server error creating payment" });
   }
 });
@@ -63,6 +67,7 @@ app.get("/verify-payment/:reference", async (req, res) => {
     const data = await response.json();
     res.json(data);
   } catch (error) {
+    console.error("Verification error:", error);
     res.status(500).json({ error: "Verification failed" });
   }
 });
