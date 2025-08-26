@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
+import fetch from "node-fetch";   // ✅ Needed for Paystack API
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -25,30 +26,27 @@ app.post("/create-payment", async (req, res) => {
     const response = await fetch("https://api.paystack.co/transaction/initialize", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`, // ✅ must be SECRET key
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        email: `${phone}@premierpredict.com`, // Paystack requires email, fake with phone
+        email: `${phone}@premierpredict.com`, // fake email since Paystack requires it
         amount,
-        callback_url: "https://premierpredict.onrender.com/success.html", // ✅ change to your actual deployed success page
-        metadata: {
-          phone,
-          match,
-        },
+        callback_url: "https://premierpredict.onrender.com/success.html", // ✅ change to your deployed success page
+        metadata: { phone, match },
       }),
     });
 
     const data = await response.json();
 
     if (!data.status) {
-      console.error("Paystack init failed:", data);
-      return res.status(400).json({ error: data.message });
+      console.error("❌ Paystack init failed:", data);
+      return res.status(400).json({ error: data.message || "Paystack error" });
     }
 
     res.json({ url: data.data.authorization_url });
   } catch (error) {
-    console.error("Payment error:", error);
+    console.error("❌ Payment error:", error.message, error.stack);
     res.status(500).json({ error: "Server error creating payment" });
   }
 });
@@ -67,7 +65,7 @@ app.get("/verify-payment/:reference", async (req, res) => {
     const data = await response.json();
     res.json(data);
   } catch (error) {
-    console.error("Verification error:", error);
+    console.error("❌ Verification error:", error.message, error.stack);
     res.status(500).json({ error: "Verification failed" });
   }
 });
