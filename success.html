@@ -1,240 +1,79 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Payment Successful - PremierPredict</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root {
-      --green: #2b8a3e;
-      --green-dark: #237032;
-      --bg: #f5f7fa;
-      --text: #222;
-    }
-    * { box-sizing: border-box; }
     body {
+      font-family: "Poppins", sans-serif;
+      background: #f5f7fa;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
       margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      font-family: "Poppins", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      padding: 16px;
     }
-    .card {
-      width: 100%;
-      max-width: 520px;
+    .box {
       background: #fff;
-      border-radius: 16px;
-      padding: 28px;
-      box-shadow: 0 10px 30px rgba(0,0,0,.08);
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
       text-align: center;
+      max-width: 400px;
+      width: 100%;
     }
-    h1 {
-      margin: 0 0 8px;
-      color: var(--green);
-      font-size: 26px;
-    }
-    p.lead {
-      margin: 0 0 18px;
-      opacity: .85;
+    h2 {
+      color: green;
     }
     .ticket {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px 14px;
-      border-radius: 10px;
-      border: 1px dashed var(--green);
-      font-weight: 700;
-      font-size: 18px;
-      word-break: break-all;
+      font-size: 20px;
+      font-weight: bold;
+      margin-top: 15px;
+      color: #2b8a3e;
     }
-    .muted { opacity: .7; }
-    .row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-top: 14px;
-      text-align: left;
-    }
-    .field {
-      background: #fafafa;
-      border: 1px solid #eee;
-      border-radius: 10px;
-      padding: 12px;
-      min-height: 56px;
-    }
-    .label {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: .04em;
-      opacity: .6;
-      margin-bottom: 6px;
-    }
-    .value { font-weight: 600; }
-    .actions {
-      margin-top: 18px;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    button, a.btn {
-      appearance: none;
-      border: none;
-      border-radius: 10px;
-      padding: 12px 16px;
-      font-weight: 700;
-      cursor: pointer;
-      background: var(--green);
-      color: #fff;
-      text-decoration: none;
-    }
-    button:hover, a.btn:hover { background: var(--green-dark); }
-    .note { margin-top: 12px; font-size: 13px; opacity: .7; }
-    .status {
-      margin: 12px 0 16px;
-      font-weight: 600;
-    }
-    .error { color: #b00020; }
-    .ok { color: var(--green); }
-    code.inline {
-      background: #f0f2f5;
-      border: 1px solid #e6e8ec;
-      padding: 2px 6px;
-      border-radius: 6px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      font-size: .95em;
+    .error {
+      color: red;
+      margin-top: 15px;
     }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>✅ Payment Successful!</h1>
-    <p class="lead">Thanks for playing Premier Predict.</p>
-
-    <div id="status" class="status muted">Verifying your payment…</div>
-
-    <div class="ticket" id="ticketBox" style="display:none;">
-      <span>🎟️ Ticket ID:</span>
-      <span id="ticketId">—</span>
-      <button id="copyBtn" title="Copy Ticket ID">Copy</button>
-    </div>
-
-    <div class="row" id="details" style="display:none;">
-      <div class="field">
-        <div class="label">Phone</div>
-        <div class="value" id="phoneVal">—</div>
-      </div>
-      <div class="field">
-        <div class="label">Selection</div>
-        <div class="value" id="selectionVal">—</div>
-      </div>
-    </div>
-
-    <div class="actions">
-      <a class="btn" href="index.html">Back to Home</a>
-    </div>
-
-    <p class="note">Keep your Ticket ID safe — you’ll need it to claim winnings.</p>
+  <div class="box">
+    <h2>✅ Payment Successful</h2>
+    <p>Thank you for your prediction.</p>
+    <p>Your Ticket ID:</p>
+    <div class="ticket" id="ticketId">Loading...</div>
+    <div id="error" class="error"></div>
   </div>
 
   <script>
-    const $ = (id) => document.getElementById(id);
+    // Get Paystack reference from URL
+    const params = new URLSearchParams(window.location.search);
+    const reference = params.get("reference");
 
-    function showTicket(ticket, phone, selection, verified = false) {
-      $("ticketId").textContent = ticket || "—";
-      $("ticketBox").style.display = "inline-flex";
-      $("details").style.display = (phone || selection) ? "grid" : "none";
-      if (phone) $("phoneVal").textContent = phone;
-      if (selection) $("selectionVal").textContent = selection;
-
-      $("status").className = "status " + (verified ? "ok" : "muted");
-      $("status").textContent = verified
-        ? "Payment verified ✔"
-        : "Ticket shown (awaiting verification)";
-    }
-
-    (function init() {
-      const params = new URLSearchParams(window.location.search);
-      const reference = params.get("reference");  // Paystack always appends this
-      const ticketFromUrl = params.get("ticket"); // fallback if present
-
-      // Copy button
-      $("copyBtn").addEventListener("click", async () => {
-        try {
-          await navigator.clipboard.writeText($("ticketId").textContent.trim());
-          $("copyBtn").textContent = "Copied!";
-          setTimeout(() => ($("copyBtn").textContent = "Copy"), 1500);
-        } catch {
-          // fallback
-          const t = document.createElement("textarea");
-          t.value = $("ticketId").textContent.trim();
-          document.body.appendChild(t);
-          t.select();
-          document.execCommand("copy");
-          document.body.removeChild(t);
-          $("copyBtn").textContent = "Copied!";
-          setTimeout(() => ($("copyBtn").textContent = "Copy"), 1500);
-        }
-      });
-
-      // Preferred: verify with backend using reference
-      if (reference) {
-        fetch(`https://premierpredict.onrender.com/verify-payment/${encodeURIComponent(reference)}`)
-          .then(r => r.json())
-          .then(data => {
-            if (data && data.success) {
-              const ticket = data.ticketId;
-              const phone = data.phone;
-              // selections might be an object/array; show a readable value
-              let selectionText = "";
-              const sel = data.selections;
-              if (sel && typeof sel === "object") {
-                try {
-                  // If backend returned JSON string, parse it
-                  const parsed = typeof sel === "string" ? JSON.parse(sel) : sel;
-                  // Try common shapes
-                  if (Array.isArray(parsed)) {
-                    selectionText = parsed.join(", ");
-                  } else if (parsed && typeof parsed === "object") {
-                    // show first value or join all values
-                    const vals = Object.values(parsed);
-                    selectionText = vals.join(", ");
-                  }
-                } catch {
-                  selectionText = String(sel);
-                }
-              } else if (sel) {
-                selectionText = String(sel);
-              }
-              showTicket(ticket, phone, selectionText || null, true);
-            } else {
-              $("status").className = "status error";
-              $("status").textContent = (data && data.message) ? data.message : "Payment could not be verified.";
-              // Fallback: if URL has ticket, at least show it (unverified)
-              if (ticketFromUrl) showTicket(ticketFromUrl, null, null, false);
-            }
-          })
-          .catch(err => {
-            console.error(err);
-            $("status").className = "status error";
-            $("status").textContent = "Network error verifying payment.";
-            if (ticketFromUrl) showTicket(ticketFromUrl, null, null, false);
-          });
+    async function verifyPayment() {
+      if (!reference) {
+        document.getElementById("ticketId").innerText = "No reference found.";
         return;
       }
 
-      // No reference? Fallback to showing ticket if present
-      if (ticketFromUrl) {
-        showTicket(ticketFromUrl, null, null, false);
-      } else {
-        $("status").className = "status error";
-        $("status").textContent = "No payment reference or ticket found in URL.";
+      try {
+        const res = await fetch(`https://premierpredict.onrender.com/verify-payment/${reference}`);
+        const data = await res.json();
+
+        if (data.success) {
+          document.getElementById("ticketId").innerText = data.ticketId;
+        } else {
+          document.getElementById("ticketId").innerText = "Verification failed.";
+          document.getElementById("error").innerText = data.message || "Try again later.";
+        }
+      } catch (err) {
+        document.getElementById("ticketId").innerText = "Server error.";
+        document.getElementById("error").innerText = err.message;
       }
-    })();
+    }
+
+    verifyPayment();
   </script>
 </body>
-  </html>
+</html>
