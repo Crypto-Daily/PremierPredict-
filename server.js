@@ -101,6 +101,36 @@ app.post("/create-payment", async (req, res) => {
         metadata: { phone, match, ticketId }, // ✅ store ticket in Paystack metadata
       }),
     });
+// Generate ticket ID (example: PRE12345678)
+function generateTicketId() {
+  return "PRE" + Math.floor(10000000 + Math.random() * 90000000);
+}
+
+app.post("/create-payment", async (req, res) => {
+  try {
+    const { phone, match } = req.body;
+
+    if (!phone || !match) {
+      return res.status(400).json({ error: "Phone and match are required" });
+    }
+
+    const amount = 100 * 100;
+    const ticketId = generateTicketId();
+
+    const response = await fetch("https://api.paystack.co/transaction/initialize", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: `${phone}@premierpredict.com`,
+        amount,
+        // ✅ redirect to success page with ticket id in query string
+        callback_url: `https://crypto-daily.github.io/PremierPredict-/success.html?ticket=${ticketId}`,
+        metadata: { phone, match, ticketId },
+      }),
+    });
 
     const data = await response.json();
 
