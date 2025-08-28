@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Payment Successful</title>
+  <title>Payment Successful - PremierPredict</title>
   <style>
     body {
       font-family: 'Poppins', sans-serif;
@@ -12,40 +12,43 @@
     }
     .card {
       background: white;
+      padding: 30px;
       border-radius: 12px;
-      padding: 20px;
-      max-width: 400px;
-      margin: auto;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      display: inline-block;
     }
-    h1 {
-      color: green;
-    }
-    .ticket {
-      font-size: 20px;
-      font-weight: bold;
-      color: #333;
-      margin-top: 10px;
-    }
+    h1 { color: #28a745; }
+    .ticket { font-size: 20px; font-weight: bold; color: #333; }
   </style>
 </head>
 <body>
   <div class="card">
     <h1>✅ Payment Successful!</h1>
-    <p>Thank you for playing. Your unique Ticket ID is:</p>
-    <p class="ticket" id="ticketId">Loading...</p>
-    <p>Save this Ticket ID safely. You will need it to claim winnings.</p>
+    <p>Your Ticket ID:</p>
+    <p class="ticket" id="ticketId">Verifying...</p>
   </div>
 
   <script>
-    // Get ticket from URL (e.g. success.html?ticket=PRE12345678)
-    const urlParams = new URLSearchParams(window.location.search);
-    const ticket = urlParams.get("ticket");
+    // Extract Paystack reference from URL
+    const params = new URLSearchParams(window.location.search);
+    const reference = params.get("reference");
 
-    if (ticket) {
-      document.getElementById("ticketId").textContent = ticket;
+    if (reference) {
+      fetch(`https://premierpredict.onrender.com/verify-payment/${reference}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            document.getElementById("ticketId").textContent = data.ticketId;
+          } else {
+            document.getElementById("ticketId").textContent = "Payment could not be verified.";
+          }
+        })
+        .catch(err => {
+          document.getElementById("ticketId").textContent = "Error verifying payment.";
+          console.error(err);
+        });
     } else {
-      document.getElementById("ticketId").textContent = "⚠️ No Ticket Found";
+      document.getElementById("ticketId").textContent = "No payment reference found.";
     }
   </script>
 </body>
