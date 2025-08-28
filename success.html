@@ -2,62 +2,67 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Payment Successful - PremierPredict</title>
+  <title>Payment Successful - Premier Predict</title>
   <style>
     body {
       font-family: "Poppins", sans-serif;
-      background: linear-gradient(135deg, #00c6ff, #0072ff);
-      color: #fff;
+      background: #f5f7fa;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .success-box {
+      background: #fff;
+      padding: 40px;
+      border-radius: 15px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
       text-align: center;
-      padding: 50px;
+      max-width: 400px;
     }
-    .container {
-      max-width: 500px;
-      margin: 0 auto;
-      background: rgba(255, 255, 255, 0.1);
-      padding: 30px;
-      border-radius: 20px;
-      box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-    }
-    h1 {
-      font-size: 2rem;
-      margin-bottom: 20px;
+    h2 {
+      color: #2b8a3e;
+      margin-bottom: 15px;
     }
     p {
-      font-size: 1.2rem;
-      margin-bottom: 20px;
+      color: #333;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+    strong {
+      color: #2b8a3e;
+      font-size: 18px;
     }
     a {
       display: inline-block;
-      padding: 12px 24px;
-      background: #fff;
-      color: #0072ff;
+      margin-top: 20px;
+      padding: 10px 20px;
+      background: #2b8a3e;
+      color: #fff;
       text-decoration: none;
-      border-radius: 30px;
-      font-weight: bold;
-      transition: 0.3s;
+      border-radius: 8px;
     }
     a:hover {
-      background: #f0f0f0;
+      background: #237032;
     }
   </style>
 </head>
-  <p id="ticketMsg">Thank you for playing Premier Predict. Your ticket has been recorded.</p>
-
-<script>
-  const params = new URLSearchParams(window.location.search);
-  const ticket = params.get("ticket");
-  if (ticket) {
-    document.getElementById("ticketMsg").innerText =
-      "✅ Payment successful! Your Ticket ID: " + ticket;
-  }
 <body>
-  <div class="container">
-    <h1>✅ Payment Successful!</h1>
-    <p>Thank you for playing PremierPredict.</p>
-    <p>Your ticket has been recorded. We will update you if you win 🎉</p>
-    <a href="index.html">Play Again</a>
+  <div class="success-box">
+    <h2>🎉 Payment Successful!</h2>
+    <p id="ticketMsg">Thank you for playing Premier Predict.</p>
+    <a href="index.html">Back to Home</a>
   </div>
+
+  <script>
+    // Get ticket from URL (example: ?ticket=PRE12345678)
+    const params = new URLSearchParams(window.location.search);
+    const ticket = params.get("ticket");
+    if (ticket) {
+      document.getElementById("ticketMsg").innerHTML =
+        "✅ Your Ticket ID is <strong>" + ticket + "</strong><br>Keep it safe, you’ll need it to claim winnings.";
+    }
+  </script>
 </body>
-    </script>
 </html>
