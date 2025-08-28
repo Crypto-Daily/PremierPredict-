@@ -29,8 +29,9 @@ app.post("/create-payment", async (req, res) => {
   try {
     const { phone, selections } = req.body;
 
-    if (!phone || !selections) {
-      return res.status(400).json({ error: "Phone and selections are required" });
+    // ✅ Ensure phone is provided and selections is not empty
+    if (!phone || !selections || Object.keys(selections).length === 0) {
+      return res.status(400).json({ error: "Phone number and selections are required" });
     }
 
     const amount = 100 * 100; // ₦100 in kobo
