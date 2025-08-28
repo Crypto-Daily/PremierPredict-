@@ -1,162 +1,223 @@
-<!DOCTYPE html>  
-<html lang="en">  
-<head>  
-  <meta charset="UTF-8">  
-  <title>Premier Predict - Jackpot</title>  
-  <style>  
-    body {  
-      font-family: "Poppins", sans-serif;  
-      background: #f5f7fa;  
-      display: flex;  
-      justify-content: center;  
-      align-items: center;  
-      min-height: 100vh;  
-      margin: 0;  
-      padding: 20px;  
-    }  
-    .container {  
-      background: #fff;  
-      padding: 25px;  
-      border-radius: 15px;  
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);  
-      max-width: 600px;  
-      width: 100%;  
-    }  
-    h2 {  
-      text-align: center;  
-      margin-bottom: 20px;  
-      color: #333;  
-    }  
-    label {  
-      font-size: 14px;  
-      font-weight: 600;  
-      display: block;  
-      margin-top: 10px;  
-    }  
-    input, button {  
-      width: 100%;  
-      padding: 10px;  
-      margin-top: 8px;  
-      border: 1px solid #ddd;  
-      border-radius: 8px;  
-      font-size: 14px;  
-    }  
-    button {  
-      background: #2b8a3e;  
-      color: #fff;  
-      font-weight: bold;  
-      cursor: pointer;  
-      transition: 0.3s;  
-      margin-top: 20px;  
-    }  
-    button:hover {  
-      background: #237032;  
-    }  
-    .match {  
-      display: flex;  
-      justify-content: space-between;  
-      align-items: center;  
-      margin: 10px 0;  
-      padding: 8px;  
-      background: #f9f9f9;  
-      border-radius: 8px;  
-    }  
-    .teams {  
-      flex: 1;  
-      font-size: 14px;  
-      font-weight: 500;  
-    }  
-    .options {  
-      display: flex;  
-      gap: 8px;  
-    }  
-    .options label {  
-      font-weight: normal;  
-      font-size: 13px;  
-      cursor: pointer;  
-    }  
-  </style>  
-</head>  
-<body>  
-  <div class="container">  
-    <h2>Premier Predict Jackpot</h2>  
-    <form id="paymentForm">  
-      <label>Phone Number</label>  
-      <input type="tel" id="phone" placeholder="Enter phone number" required>  
-  
-      <!-- Fixtures -->  
-      <div id="fixtures"></div>  
-  
-      <button type="submit">Pay ₦100</button>  
-    </form>  
-  </div>  
-  
-  <script>  
-    const fixtures = [  
-      "Nottingham Forest vs Bournemouth",  
-      "Liverpool vs Brentford",  
-      "Chelsea vs Wolves",  
-      "Man City vs Tottenham",  
-      "Fulham vs Brighton",  
-      "West Ham vs Arsenal",  
-      "Newcastle vs Aston Villa",  
-      "Everton vs Crystal Palace",  
-      "Man United vs Southampton",  
-      "Leicester vs Burnley"  
-    ];  
-  
-    const fixturesDiv = document.getElementById("fixtures");  
-  
-    fixtures.forEach((match, index) => {  
-      const div = document.createElement("div");  
-      div.className = "match";  
-      div.innerHTML = `  
-        <div class="teams">${match}</div>  
-        <div class="options">  
-          <label><input type="radio" name="match${index}" value="1" required> 1</label>  
-          <label><input type="radio" name="match${index}" value="X"> X</label>  
-          <label><input type="radio" name="match${index}" value="2"> 2</label>  
-        </div>  
-      `;  
-      fixturesDiv.appendChild(div);  
-    });  
-  
-    document.getElementById("paymentForm").addEventListener("submit", async (e) => {  
-      e.preventDefault();  
-  
-      const phone = document.getElementById("phone").value;  
-      const selections = {};  
-  
-      fixtures.forEach((match, index) => {  
-        const choice = document.querySelector(`input[name="match${index}"]:checked`);  
-        if (choice) {  
-          selections[match] = choice.value;  
-        }  
-      });  
-  
-      if (Object.keys(selections).length !== fixtures.length) {  
-        alert("Please make a prediction for every match.");  
-        return;  
-      }  
-  
-      try {  
-        const res = await fetch("https://premierpredict.onrender.com/create-payment", {  
-          method: "POST",  
-          headers: { "Content-Type": "application/json" },  
-          body: JSON.stringify({ phone, match: selections })  
-        });  
-  
-        const data = await res.json();  
-  
-        if (data.url) {  
-          window.location.href = data.url;  
-        } else {  
-          alert("Error: " + (data.error || "Payment failed"));  
-        }  
-      } catch (err) {  
-        alert("Server error. Try again.");  
-      }  
-    });  
-  </script>  
-</body>  
-    </html>
+<!DOCTYPE html>    
+<html lang="en">    
+<head>    
+  <meta charset="UTF-8">    
+  <title>Premier Predict - Lottery</title>    
+  <style>    
+    body {    
+      font-family: "Poppins", sans-serif;    
+      background: #f5f7fa;    
+      display: flex;    
+      justify-content: center;    
+      align-items: center;    
+      min-height: 100vh;    
+      margin: 0;    
+    }    
+    .container {    
+      background: #fff;    
+      padding: 30px;    
+      border-radius: 15px;    
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);    
+      max-width: 500px;    
+      width: 100%;    
+    }    
+    h2 {    
+      text-align: center;    
+      margin-bottom: 20px;    
+      color: #333;    
+    }    
+    label {    
+      font-size: 14px;    
+      font-weight: 600;    
+      display: block;    
+      margin-top: 10px;    
+    }    
+    input, select, button {    
+      width: 100%;    
+      padding: 10px;    
+      margin-top: 8px;    
+      border: 1px solid #ddd;    
+      border-radius: 8px;    
+      font-size: 14px;    
+    }    
+    button {    
+      background: #2b8a3e;    
+      color: #fff;    
+      font-weight: bold;    
+      cursor: pointer;    
+      transition: 0.3s;    
+    }    
+    button:hover {    
+      background: #237032;    
+    }    
+    .match {    
+      margin: 12px 0;    
+      padding: 10px;    
+      border: 1px solid #eee;    
+      border-radius: 8px;    
+    }    
+    .match label {    
+      font-weight: 500;    
+      margin-bottom: 6px;    
+    }    
+    .options {    
+      display: flex;    
+      gap: 10px;    
+    }    
+    .options label {    
+      flex: 1;    
+      text-align: center;    
+      background: #f1f1f1;    
+      padding: 8px;    
+      border-radius: 6px;    
+      cursor: pointer;    
+    }    
+    .options input {    
+      display: none;    
+    }    
+    .options input:checked + span {    
+      background: #2b8a3e;    
+      color: #fff;    
+      font-weight: bold;    
+      border-radius: 6px;    
+      padding: 6px;    
+      display: inline-block;    
+    }    
+  </style>    
+</head>    
+<body>    
+  <div class="container">    
+    <h2>Premier Predict</h2>    
+    <form id="paymentForm">    
+      <label>Phone Number</label>    
+      <input type="tel" id="phone" placeholder="Enter phone number" required>    
+    
+      <!-- Matches -->    
+      <div class="match">    
+        <label>1. Nottingham Forest vs Bournemouth</label>    
+        <div class="options">    
+          <label><input type="radio" name="match1" value="1"><span>1</span></label>    
+          <label><input type="radio" name="match1" value="X"><span>X</span></label>    
+          <label><input type="radio" name="match1" value="2"><span>2</span></label>    
+        </div>    
+      </div>    
+    
+      <div class="match">    
+        <label>2. Liverpool vs Brentford</label>    
+        <div class="options">    
+          <label><input type="radio" name="match2" value="1"><span>1</span></label>    
+          <label><input type="radio" name="match2" value="X"><span>X</span></label>    
+          <label><input type="radio" name="match2" value="2"><span>2</span></label>    
+        </div>    
+      </div>    
+    
+      <div class="match">    
+        <label>3. Chelsea vs Wolves</label>    
+        <div class="options">    
+          <label><input type="radio" name="match3" value="1"><span>1</span></label>    
+          <label><input type="radio" name="match3" value="X"><span>X</span></label>    
+          <label><input type="radio" name="match3" value="2"><span>2</span></label>    
+        </div>    
+      </div>    
+    
+      <div class="match">    
+        <label>4. Man City vs Tottenham</label>    
+        <div class="options">    
+          <label><input type="radio" name="match4" value="1"><span>1</span></label>    
+          <label><input type="radio" name="match4" value="X"><span>X</span></label>    
+          <label><input type="radio" name="match4" value="2"><span>2</span></label>    
+        </div>    
+      </div>    
+    
+      <div class="match">    
+        <label>5. Fulham vs Brighton</label>    
+        <div class="options">    
+          <label><input type="radio" name="match5" value="1"><span>1</span></label>    
+          <label><input type="radio" name="match5" value="X"><span>X</span></label>    
+          <label><input type="radio" name="match5" value="2"><span>2</span></label>    
+        </div>    
+      </div>    
+    
+      <div class="match">    
+        <label>6. West Ham vs Arsenal</label>    
+        <div class="options">    
+          <label><input type="radio" name="match6" value="1"><span>1</span></label>    
+          <label><input type="radio" name="match6" value="X"><span>X</span></label>    
+          <label><input type="radio" name="match6" value="2"><span>2</span></label>    
+        </div>    
+      </div>    
+    
+      <div class="match">    
+        <label>7. Newcastle vs Aston Villa</label>    
+        <div class="options">    
+          <label><input type="radio" name="match7" value="1"><span>1</span></label>    
+          <label><input type="radio" name="match7" value="X"><span>X</span></label>    
+          <label><input type="radio" name="match7" value="2"><span>2</span></label>    
+        </div>    
+      </div>    
+    
+      <div class="match">    
+        <label>8. Everton vs Crystal Palace</label>    
+        <div class="options">    
+          <label><input type="radio" name="match8" value="1"><span>1</span></label>    
+          <label><input type="radio" name="match8" value="X"><span>X</span></label>    
+          <label><input type="radio" name="match8" value="2"><span>2</span></label>    
+        </div>    
+      </div>    
+    
+      <div class="match">    
+        <label>9. Man United vs Southampton</label>    
+        <div class="options">    
+          <label><input type="radio" name="match9" value="1"><span>1</span></label>    
+          <label><input type="radio" name="match9" value="X"><span>X</span></label>    
+          <label><input type="radio" name="match9" value="2"><span>2</span></label>    
+        </div>    
+      </div>    
+    
+      <div class="match">    
+        <label>10. Leicester vs Burnley</label>    
+        <div class="options">    
+          <label><input type="radio" name="match10" value="1"><span>1</span></label>    
+          <label><input type="radio" name="match10" value="X"><span>X</span></label>    
+          <label><input type="radio" name="match10" value="2"><span>2</span></label>    
+        </div>    
+      </div>    
+    
+      <button type="submit">Pay ₦100</button>    
+    </form>    
+  </div>    
+    
+  <script>    
+    document.getElementById("paymentForm").addEventListener("submit", async (e) => {    
+      e.preventDefault();    
+    
+      const phone = document.getElementById("phone").value;    
+    
+      // ✅ Collect predictions    
+      const selections = {};    
+      for (let i = 1; i <= 10; i++) {    
+        const choice = document.querySelector(`input[name="match${i}"]:checked`);    
+        if (choice) selections[`match${i}`] = choice.value;    
+      }    
+    
+      try {    
+        const res = await fetch("https://premierpredict.onrender.com/create-payment", {    
+          method: "POST",    
+          headers: { "Content-Type": "application/json" },    
+          body: JSON.stringify({ phone, selections })    
+        });    
+    
+        const data = await res.json();    
+    
+        if (data.url) {    
+          window.location.href = data.url; // redirect to Paystack checkout    
+        } else {    
+          alert("Error: " + (data.error || "Payment failed"));    
+        }    
+      } catch (err) {    
+        alert("Server error. Try again.");    
+      }    
+    });    
+  </script>    
+</body>    
+          </html>
