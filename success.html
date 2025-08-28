@@ -2,66 +2,50 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Payment Successful - Premier Predict</title>
+  <title>Payment Successful</title>
   <style>
     body {
-      font-family: "Poppins", sans-serif;
+      font-family: 'Poppins', sans-serif;
       background: #f5f7fa;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
-    .success-box {
-      background: #fff;
-      padding: 40px;
-      border-radius: 15px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
       text-align: center;
+      padding: 50px;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
       max-width: 400px;
+      margin: auto;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
-    h2 {
-      color: #2b8a3e;
-      margin-bottom: 15px;
+    h1 {
+      color: green;
     }
-    p {
+    .ticket {
+      font-size: 20px;
+      font-weight: bold;
       color: #333;
-      font-size: 16px;
       margin-top: 10px;
-    }
-    strong {
-      color: #2b8a3e;
-      font-size: 18px;
-    }
-    a {
-      display: inline-block;
-      margin-top: 20px;
-      padding: 10px 20px;
-      background: #2b8a3e;
-      color: #fff;
-      text-decoration: none;
-      border-radius: 8px;
-    }
-    a:hover {
-      background: #237032;
     }
   </style>
 </head>
 <body>
-  <div class="success-box">
-    <h2>🎉 Payment Successful!</h2>
-    <p id="ticketMsg">Thank you for playing Premier Predict.</p>
-    <a href="index.html">Back to Home</a>
+  <div class="card">
+    <h1>✅ Payment Successful!</h1>
+    <p>Thank you for playing. Your unique Ticket ID is:</p>
+    <p class="ticket" id="ticketId">Loading...</p>
+    <p>Save this Ticket ID safely. You will need it to claim winnings.</p>
   </div>
 
   <script>
-    // Get ticket from URL (example: ?ticket=PRE12345678)
-    const params = new URLSearchParams(window.location.search);
-    const ticket = params.get("ticket");
+    // Get ticket from URL (e.g. success.html?ticket=PRE12345678)
+    const urlParams = new URLSearchParams(window.location.search);
+    const ticket = urlParams.get("ticket");
+
     if (ticket) {
-      document.getElementById("ticketMsg").innerHTML =
-        "✅ Your Ticket ID is <strong>" + ticket + "</strong><br>Keep it safe, you’ll need it to claim winnings.";
+      document.getElementById("ticketId").textContent = ticket;
+    } else {
+      document.getElementById("ticketId").textContent = "⚠️ No Ticket Found";
     }
   </script>
 </body>
