@@ -76,7 +76,7 @@ app.post("/create-payment", async (req, res) => {
   }
 });
 
-// ✅ Verify payment and save ticket
+// ✅ Verify payment and save ticket then redirect to success page
 app.get("/verify-payment/:reference", async (req, res) => {
   try {
     const { reference } = req.params;
@@ -95,25 +95,27 @@ app.get("/verify-payment/:reference", async (req, res) => {
       const amount = data.data.amount;
       const paystackRef = data.data.reference;
 
-      // ✅ Save ticket into MongoDB
-      const ticket = new Ticket({ ticketId, phone, selections, reference: paystackRef, amount });
-      await ticket.save();
+      // ✅ Save ticket into MongoDB if not already saved
+      const existing = await Ticket.findOne({ reference: paystackRef });
+      if (!existing) {
+        const ticket = new Ticket({ ticketId, phone, selections, reference: paystackRef, amount });
+        await ticket.save();
+      }
 
-      return res.json({
-        success: true,
-        ticketId,
-        phone,
-        selections,
-      });
+      // ✅ Redirect to frontend success page with ticketId
+      return res.redirect(
+        `https://crypto-daily.github.io/PremierPredict-/success.html?ticket=${ticketId}`
+      );
     } else {
-      return res.status(400).json({ success: false, message: "Payment not verified" });
+      return res.redirect(
+        `https://crypto-daily.github.io/PremierPredict-/failed.html`
+      );
     }
   } catch (error) {
     console.error("❌ Verification error:", error.message);
-    res.status(500).json({ error: "Verification failed" });
+    res.redirect(`https://crypto-daily.github.io/PremierPredict-/failed.html`);
   }
 });
-
 // ✅ Root route
 app.get("/", (req, res) => {
   res.send("PremierPredict Backend is running 🚀");
