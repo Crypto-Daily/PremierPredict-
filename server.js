@@ -4,20 +4,30 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
-import pkg from "pg";
+import mongoose from "mongoose";
 
 dotenv.config();
-const { Pool } = pkg;
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// ✅ Setup PostgreSQL connection
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }, // Render/Postgres requires SSL
+// ✅ Connect to MongoDB
+mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch(err => console.error("❌ MongoDB connection failed:", err));
+
+// ✅ Define Ticket Schema
+const ticketSchema = new mongoose.Schema({
+  ticketId: { type: String, required: true, unique: true },
+  phone: { type: String, required: true },
+  selections: { type: Object, required: true },
+  reference: { type: String, required: true },
+  amount: { type: Number, required: true },
+  createdAt: { type: Date, default: Date.now }
 });
+
+const Ticket = mongoose.model("Ticket", ticketSchema);
 
 // ✅ Generate unique Ticket ID
 function generateTicketId() {
@@ -83,14 +93,11 @@ app.get("/verify-payment/:reference", async (req, res) => {
     if (data.status && data.data.status === "success") {
       const { phone, selections, ticketId } = data.data.metadata;
       const amount = data.data.amount;
-      const reference = data.data.reference;
+      const paystackRef = data.data.reference;
 
-      // ✅ Save ticket into database
-      await pool.query(
-        `INSERT INTO tickets (ticket_id, password, phone, selections, reference, amount) 
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [ticketId, "defaultpass", phone, JSON.stringify(selections), reference, amount]
-      );
+      // ✅ Save ticket into MongoDB
+      const ticket = new Ticket({ ticketId, phone, selections, reference: paystackRef, amount });
+      await ticket.save();
 
       return res.json({
         success: true,
