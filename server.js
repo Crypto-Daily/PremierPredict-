@@ -124,12 +124,13 @@ app.get("/", (req, res) => {
 // ✅ Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
-// ✅ Get all tickets (for checking selections)
+
+// ✅ Get all tickets (for debugging only)
 app.get("/tickets", async (req, res) => {
   try {
-    const tickets = await Ticket.find().sort({ createdAt: -1 });
+    const tickets = await Ticket.find();
     res.json(tickets);
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch tickets" });
+    res.status(500).json({ error: err.message });
   }
 });
