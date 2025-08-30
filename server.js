@@ -121,16 +121,20 @@ app.get("/", (req, res) => {
   res.send("PremierPredict Backend is running 🚀");
 });
 
-// ✅ Start server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
-<<<<<<< HEAD
-
-// ✅ Get all tickets (for debugging only)
-=======
-// ✅ View all tickets (for debugging)
->>>>>>> abcdb4f (Add /tickets route to view saved tickets)
+// ✅ Route to fetch all tickets
 app.get("/tickets", async (req, res) => {
   try {
-    const tickets = await Ticket.find();
+    const tickets = await Ticket.find().sort({ createdAt: -1 });
     res.json(tickets);
+  } catch (error) {
+    console.error("Error fetching tickets:", error);
+    res.status(500).json({ error: "Failed to fetch tickets" });
+  }
+});
+
+// ✅ Start server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
+});
+
