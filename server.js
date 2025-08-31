@@ -39,7 +39,6 @@ app.post("/create-payment", async (req, res) => {
   try {
     const { phone, selections } = req.body;
 
-    // ✅ Ensure phone is provided and selections is not empty
     if (!phone || !selections || Object.keys(selections).length === 0) {
       return res.status(400).json({ error: "Phone number and selections are required" });
     }
@@ -55,9 +54,9 @@ app.post("/create-payment", async (req, res) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        email: `${phone}@premierpredict.com`, // Fake email (Paystack requires it)
+        email: `${phone}@premierpredict.com`, // Fake email since Paystack requires it
         amount,
-        callback_url: `https://crypto-daily.github.io/PremierPredict-/success.html?ticket=${ticketId}`,
+        callback_url: `${process.env.BASE_URL}/verify-payment`, // ✅ Send back to backend
         metadata: { phone, selections, ticketId },
       }),
     });
@@ -76,16 +75,18 @@ app.post("/create-payment", async (req, res) => {
   }
 });
 
-// ✅ Verify payment and save ticket then redirect to success page
-app.get("/verify-payment/:reference", async (req, res) => {
+// ✅ Verify payment and save ticket
+app.get("/verify-payment", async (req, res) => {
   try {
-    const { reference } = req.params;
+    const { reference } = req.query;
+
+    if (!reference) {
+      return res.redirect("https://crypto-daily.github.io/PremierPredict-/failed.html");
+    }
 
     // Verify with Paystack
     const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
-      headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-      },
+      headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
     });
 
     const data = await response.json();
@@ -102,20 +103,16 @@ app.get("/verify-payment/:reference", async (req, res) => {
         await ticket.save();
       }
 
-      // ✅ Redirect to frontend success page with ticketId
-      return res.redirect(
-        `https://crypto-daily.github.io/PremierPredict-/success.html?ticket=${ticketId}`
-      );
+      return res.redirect(`https://crypto-daily.github.io/PremierPredict-/success.html?ticket=${ticketId}`);
     } else {
-      return res.redirect(
-        `https://crypto-daily.github.io/PremierPredict-/failed.html`
-      );
+      return res.redirect(`https://crypto-daily.github.io/PremierPredict-/failed.html`);
     }
   } catch (error) {
     console.error("❌ Verification error:", error.message);
     res.redirect(`https://crypto-daily.github.io/PremierPredict-/failed.html`);
   }
 });
+
 // ✅ Root route
 app.get("/", (req, res) => {
   res.send("PremierPredict Backend is running 🚀");
@@ -137,4 +134,3 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
 });
-
