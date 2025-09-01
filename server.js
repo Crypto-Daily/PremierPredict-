@@ -75,18 +75,16 @@ app.post("/create-payment", async (req, res) => {
   }
 });
 
-// ✅ Verify payment and save ticket
-app.get("/verify-payment", async (req, res) => {
+// ✅ Verify payment and save ticket then redirect to success page
+app.get("/verify-payment/:reference", async (req, res) => {
   try {
-    const { reference } = req.query;
-
-    if (!reference) {
-      return res.redirect("https://crypto-daily.github.io/PremierPredict-/failed.html");
-    }
+    const { reference } = req.params;
 
     // Verify with Paystack
     const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
-      headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+      },
     });
 
     const data = await response.json();
@@ -97,6 +95,26 @@ app.get("/verify-payment", async (req, res) => {
       const paystackRef = data.data.reference;
 
       // ✅ Save ticket into MongoDB if not already saved
+      const existing = await Ticket.findOne({ reference: paystackRef });
+      if (!existing) {
+        const ticket = new Ticket({ ticketId, phone, selections, reference: paystackRef, amount });
+        await ticket.save();
+      }
+
+      // ✅ Redirect to GitHub Pages with ticketId in hash (safe for static hosting)
+      return res.redirect(
+        `https://crypto-daily.github.io/PremierPredict-/success.html#${ticketId}`
+      );
+    } else {
+      return res.redirect(
+        `https://crypto-daily.github.io/PremierPredict-/failed.html`
+      );
+    }
+  } catch (error) {
+    console.error("❌ Verification error:", error.message);
+    res.redirect(`https://crypto-daily.github.io/PremierPredict-/failed.html`);
+  }
+});      // ✅ Save ticket into MongoDB if not already saved
       const existing = await Ticket.findOne({ reference: paystackRef });
       if (!existing) {
         const ticket = new Ticket({ ticketId, phone, selections, reference: paystackRef, amount });
