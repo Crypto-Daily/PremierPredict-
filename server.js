@@ -106,9 +106,8 @@ app.get("/verify-payment/:reference", async (req, res) => {
         `https://crypto-daily.github.io/PremierPredict-/success.html#${ticketId}`
       );
     } else {
-      return res.redirect(
-        `https://crypto-daily.github.io/PremierPredict-/failed.html`
-      );
+      res.redirect(`https://crypto-daily.github.io/PremierPredict-/success.html?ticket=${ticketId}`);
+return;
     }
   } catch (error) {
     console.error("❌ Verification error:", error.message);
