@@ -1,90 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Payment Successful - PremierPredict</title>
   <style>
     body {
-      font-family: 'Poppins', sans-serif;
-      background: #f5f7fa;
-      margin: 0;
-      padding: 40px;
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
       text-align: center;
+      padding: 50px;
     }
     .card {
       background: white;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      max-width: 500px;
-      margin: auto;
       padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      display: inline-block;
     }
-    h1 {
-      color: #28a745;
-    }
-    .ticket-info {
-      text-align: left;
-      margin-top: 20px;
-    }
-    .ticket-info p {
-      margin: 6px 0;
-      font-size: 16px;
+    .ticket {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: green;
+      margin-top: 15px;
     }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>🎉 Payment Successful!</h1>
+    <h1>✅ Payment Successful!</h1>
     <p>Your ticket has been generated.</p>
-    <div id="ticketDetails" class="ticket-info"></div>
+    <p class="ticket">Ticket ID: <span id="ticketId">Loading...</span></p>
   </div>
 
   <script>
-    async function loadTicket() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const ticketId = urlParams.get("ticket");
-
-      if (!ticketId) {
-        document.getElementById("ticketDetails").innerHTML =
-          "<p style='color:red'>❌ No ticket ID found.</p>";
-        return;
-      }
-
-      try {
-        // Fetch all tickets (backend doesn’t have single ticket route yet)
-        const res = await fetch("https://your-backend-service.onrender.com/tickets");
-        const tickets = await res.json();
-
-        // Find this ticket
-        const ticket = tickets.find(t => t.ticketId === ticketId);
-
-        if (!ticket) {
-          document.getElementById("ticketDetails").innerHTML =
-            "<p style='color:red'>❌ Ticket not found in database.</p>";
-          return;
-        }
-
-        // Show details
-        document.getElementById("ticketDetails").innerHTML = `
-          <p><b>Ticket ID:</b> ${ticket.ticketId}</p>
-          <p><b>Phone:</b> ${ticket.phone}</p>
-          <p><b>Amount:</b> ₦${ticket.amount / 100}</p>
-          <p><b>Reference:</b> ${ticket.reference}</p>
-          <p><b>Selections:</b></p>
-          <ul>
-            ${Object.entries(ticket.selections).map(([match, choice]) =>
-              `<li>${match}: <b>${choice}</b></li>`
-            ).join("")}
-          </ul>
-        `;
-      } catch (error) {
-        console.error("Error loading ticket:", error);
-        document.getElementById("ticketDetails").innerHTML =
-          "<p style='color:red'>⚠️ Error loading ticket details.</p>";
-      }
+    // Get ticket ID from the hash (#...)
+    const ticketId = window.location.hash.substring(1);
+    if (ticketId) {
+      document.getElementById("ticketId").textContent = ticketId;
+    } else {
+      document.getElementById("ticketId").textContent = "Not found";
     }
-
-    loadTicket();
   </script>
 </body>
 </html>
