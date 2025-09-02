@@ -1,44 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Payment Successful - PremierPredict</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f4f6f9;
+      background: #f5f7fa;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background: #fff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
       text-align: center;
-      padding: 50px;
+      width: 350px;
     }
-    .card {
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      display: inline-block;
+    h1 {
+      color: #28a745;
+      margin-bottom: 15px;
     }
-    .ticket {
-      font-size: 1.5em;
+    #ticket {
+      font-size: 18px;
       font-weight: bold;
-      color: green;
-      margin-top: 15px;
+      color: #333;
+      background: #f1f1f1;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>✅ Payment Successful!</h1>
-    <p>Your ticket has been generated.</p>
-    <p class="ticket">Ticket ID: <span id="ticketId">Loading...</span></p>
+  <div class="container">
+    <h1>✅ Payment Successful</h1>
+    <p>Your Ticket ID is:</p>
+    <div id="ticket">Loading...</div>
   </div>
 
   <script>
-    // Get ticket ID from the hash (#...)
-    const ticketId = window.location.hash.substring(1);
+    // Grab ticketId from query string (?ticket=PRE12345678)
+    const params = new URLSearchParams(window.location.search);
+    const ticketId = params.get("ticket");
+
     if (ticketId) {
-      document.getElementById("ticketId").textContent = ticketId;
+      document.getElementById("ticket").textContent = ticketId;
     } else {
-      document.getElementById("ticketId").textContent = "Not found";
+      document.getElementById("ticket").textContent = "No ticket found!";
     }
   </script>
 </body>
