@@ -186,38 +186,38 @@
       <button type="submit">Pay ₦100</button>    
     </form>    
   </div>    
-    
-  <script>    
-    document.getElementById("paymentForm").addEventListener("submit", async (e) => {    
-      e.preventDefault();    
-    
-      const phone = document.getElementById("phone").value;    
-    
-      // ✅ Collect predictions    
-      const selections = {};    
-      for (let i = 1; i <= 10; i++) {    
-        const choice = document.querySelector(`input[name="match${i}"]:checked`);    
-        if (choice) selections[`match${i}`] = choice.value;    
-      }    
-    
-      try {    
-        const res = await fetch("https://premierpredict.onrender.com/create-payment", {    
-          method: "POST",    
-          headers: { "Content-Type": "application/json" },    
-          body: JSON.stringify({ phone, selections })    
-        });    
-    
-        const data = await res.json();    
-    
-        if (data.url) {    
-          window.location.href = data.url; // redirect to Paystack checkout    
-        } else {    
-          alert("Error: " + (data.error || "Payment failed"));    
-        }    
-      } catch (err) {    
-        alert("Server error. Try again.");    
-      }    
-    });    
-  </script>    
+    <script>
+  document.getElementById("paymentForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const phone = document.getElementById("phone").value;
+
+    // ✅ Collect predictions
+    const selections = {};
+    for (let i = 1; i <= 10; i++) {
+      const choice = document.querySelector(`input[name="match${i}"]:checked`);
+      if (choice) selections[`match${i}`] = choice.value;
+    }
+
+    try {
+      const res = await fetch("https://premierpredict.onrender.com/create-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, match: selections })
+      });
+
+      const data = await res.json();
+
+      // ✅ Correct key from backend
+      if (data.authorization_url) {
+        window.location.href = data.authorization_url; // redirect to Paystack checkout
+      } else {
+        alert("Error: " + (data.error || "Payment failed"));
+      }
+    } catch (err) {
+      alert("Server error. Try again.");
+    }
+  });
+    </script>
 </body>    
           </html>
