@@ -25,32 +25,76 @@ function saveTickets(tickets) {
   fs.writeFileSync(DB_FILE, JSON.stringify(tickets, null, 2));
 }
 
-// ✅ Create payment
+// ✅ Create Paystack payment (robust + verbose logging)
 app.post("/create-payment", async (req, res) => {
   try {
-    const { phone, match } = req.body;
+    const { phone, selections } = req.body || {};
+    console.log("📩 /create-payment body:", JSON.stringify(req.body).slice(0, 400));
 
-    const response = await fetch("https://api.paystack.co/transaction/initialize", {
+    // Make sure the key is present
+    if (!process.env.PAYSTACK_SECRET_KEY) {
+      console.error("❌ Missing PAYSTACK_SECRET_KEY env");
+      return res.status(500).json({ error: "Server misconfiguration" });
+    }
+
+    // Accept selections as object/array OR JSON string
+    let parsedSelections = selections;
+    if (typeof parsedSelections === "string") {
+      try {
+        parsedSelections = JSON.parse(parsedSelections);
+      } catch {
+        console.warn("⚠️ selections is a string but not valid JSON");
+      }
+    }
+
+    const hasSelections =
+      (Array.isArray(parsedSelections) && parsedSelections.length > 0) ||
+      (parsedSelections && typeof parsedSelections === "object" && Object.keys(parsedSelections).length > 0);
+
+    if (!phone || !hasSelections) {
+      console.error("❌ Validation failed: phone or selections missing/empty");
+      return res.status(400).json({ error: "Phone number and selections are required" });
+    }
+
+    const amount = 100 * 100; // ₦100 in kobo
+    const ticketId = generateTicketId();
+
+    const initPayload = {
+      email: `${String(phone).replace(/\D/g, "")}@premierpredict.com`, // meets Paystack email requirement
+      amount,
+      // keep your original success page flow (unchanged)
+      callback_url: `https://crypto-daily.github.io/PremierPredict-/success.html?ticket=${ticketId}`,
+      metadata: { phone, selections: parsedSelections, ticketId },
+    };
+
+    const psRes = await fetch("https://api.paystack.co/transaction/initialize", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        amount: 10000, // ₦100
-        email: `${phone}@premierpredict.com`,
-        callback_url: `${process.env.SERVER_URL}/verify-payment?match=${encodeURIComponent(match)}&phone=${phone}`,
-      }),
+      body: JSON.stringify(initPayload),
     });
 
-    const data = await response.json();
-    res.json(data);
-  } catch (err) {
-    console.error("Payment Init Error:", err);
-    res.status(500).json({ error: "Payment initialization failed" });
+    const data = await psRes.json();
+    console.log("↩️ Paystack init:", data.status, data.message, data?.data && { ref: data.data.reference });
+
+    if (!data.status) {
+      // Most common cases: bad/empty key, wrong environment, or malformed payload
+      return res.status(400).json({ error: data.message || "Paystack error" });
+    }
+
+    // Frontend should redirect to this URL
+    return res.json({
+      url: data.data.authorization_url,
+      reference: data.data.reference,
+      ticketId,
+    });
+  } catch (error) {
+    console.error("❌ Payment creation error:", error);
+    return res.status(500).json({ error: "Server error creating payment" });
   }
 });
-
 // ✅ Verify payment
 app.get("/verify-payment", async (req, res) => {
   try {
