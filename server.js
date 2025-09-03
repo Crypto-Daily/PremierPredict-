@@ -38,7 +38,7 @@ app.post("/create-payment", async (req, res) => {
         email: `${phone}@premierpredict.com`, // Paystack requires email
         amount: 10000, // ₦100 (in kobo)
         reference: ticketId,
-        callback_url: `https://premierpredict-backend.onrender.com/verify-payment?ticketId=${ticketId}`, // adjust for your Render domain
+        callback_url: `https://crypto-daily.github.io/PremierPredict-/success.html?ticketId=${ticketId}`, // adjust for your Render domain
       }),
     });
 
