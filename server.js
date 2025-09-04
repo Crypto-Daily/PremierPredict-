@@ -3,6 +3,7 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
+import mongoose from "mongoose";
 
 dotenv.config();
 
@@ -10,8 +11,24 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// In-memory DB
-const tickets = [];
+// ✅ Connect to MongoDB
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+  .then(() => console.log("✅ Connected to MongoDB"))
+  .catch(err => console.error("❌ MongoDB connection error:", err));
+
+// ✅ Ticket Schema
+const ticketSchema = new mongoose.Schema({
+  ticketId: String,
+  phone: String,
+  match: Object,
+  paid: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now },
+});
+
+const Ticket = mongoose.model("Ticket", ticketSchema);
 
 // ✅ Step 1: Create Paystack payment
 app.post("/create-payment", async (req, res) => {
@@ -25,7 +42,8 @@ app.post("/create-payment", async (req, res) => {
     const ticketId = "PRE" + Math.floor(10000000 + Math.random() * 90000000);
 
     // Save ticket (unpaid for now)
-    tickets.push({ ticketId, phone, match, paid: false });
+    const ticket = new Ticket({ ticketId, phone, match, paid: false });
+    await ticket.save();
 
     // Initialize Paystack payment
     const response = await fetch("https://api.paystack.co/transaction/initialize", {
@@ -38,7 +56,7 @@ app.post("/create-payment", async (req, res) => {
         email: `${phone}@premierpredict.com`, // Paystack requires email
         amount: 10000, // ₦100 (in kobo)
         reference: ticketId,
-        callback_url: `https://crypto-daily.github.io/PremierPredict-/success.html?ticketId=${ticketId}`, // adjust for your Render domain
+        callback_url: `https://crypto-daily.github.io/PremierPredict-/success.html?ticketId=${ticketId}`,
       }),
     });
 
@@ -73,9 +91,11 @@ app.get("/verify-payment", async (req, res) => {
     const verifyData = await verifyRes.json();
 
     if (verifyData.status && verifyData.data.status === "success") {
-      // Mark ticket as paid
-      const ticket = tickets.find((t) => t.ticketId === ticketId);
-      if (ticket) ticket.paid = true;
+      // Mark ticket as paid in DB
+      await Ticket.findOneAndUpdate(
+        { ticketId },
+        { paid: true }
+      );
 
       // Redirect to success page with ticketId
       return res.redirect(`https://crypto-daily.github.io/PremierPredict-/success.html?ticket=${ticketId}`);
@@ -87,12 +107,15 @@ app.get("/verify-payment", async (req, res) => {
     res.status(500).send("Server error verifying payment");
   }
 });
+
+// ✅ Health check
 app.get("/", (req, res) => {
   res.send("PremierPredict Backend is running 🚀");
 });
 
 // ✅ Step 3: Check tickets
-app.get("/tickets", (req, res) => {
+app.get("/tickets", async (req, res) => {
+  const tickets = await Ticket.find();
   res.json(tickets);
 });
 
