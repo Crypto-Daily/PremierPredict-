@@ -87,6 +87,9 @@ app.get("/verify-payment", async (req, res) => {
     res.status(500).send("Server error verifying payment");
   }
 });
+app.get("/", (req, res) => {
+  res.send("PremierPredict Backend is running 🚀");
+});
 
 // ✅ Step 3: Check tickets
 app.get("/tickets", (req, res) => {
