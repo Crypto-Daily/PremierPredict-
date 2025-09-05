@@ -1,57 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Payment Successful - PremierPredict</title>
+  <meta charset="UTF-8">
+  <title>Payment Successful - Premier Predict</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f7fa;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
-    .container {
-      background: #fff;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      text-align: center;
-      width: 350px;
-    }
-    h1 {
-      color: #28a745;
-      margin-bottom: 15px;
-    }
-    #ticket {
-      font-size: 18px;
-      font-weight: bold;
-      color: #333;
-      background: #f1f1f1;
-      padding: 10px;
-      border-radius: 6px;
-      margin-top: 10px;
-    }
+    body { font-family: "Poppins", sans-serif; background: #f5f7fa; text-align: center; padding: 50px; }
+    .card { background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: inline-block; }
+    h2 { color: #2b8a3e; }
+    p { font-size: 16px; margin: 10px 0; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>✅ Payment Successful</h1>
-    <p>Your Ticket ID is:</p>
-    <div id="ticket">Loading...</div>
+  <div class="card">
+    <h2>✅ Payment Successful</h2>
+    <p>Your ticket ID: <strong id="ticketId"></strong></p>
+    <p>Selections:</p>
+    <pre id="selections"></pre>
   </div>
 
   <script>
-    // Grab ticketId from query string (?ticket=PRE12345678)
-    const params = new URLSearchParams(window.location.search);
-    const ticketId = params.get("ticket");
+    // ✅ Get ticket ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const ticketId = urlParams.get("ticket");
 
     if (ticketId) {
-      document.getElementById("ticket").textContent = ticketId;
+      document.getElementById("ticketId").textContent = ticketId;
+
+      // ✅ Fetch ONLY this ticket
+      fetch(`https://premierpredict.onrender.com/ticket/${ticketId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.match) {
+            document.getElementById("selections").textContent = JSON.stringify(data.match, null, 2);
+          } else {
+            document.getElementById("selections").textContent = "No selections found.";
+          }
+        })
+        .catch(err => {
+          document.getElementById("selections").textContent = "Error loading ticket.";
+        });
     } else {
-      document.getElementById("ticket").textContent = "No ticket found!";
+      document.querySelector(".card").innerHTML = "<h2>❌ No ticket ID found</h2>";
     }
   </script>
 </body>
