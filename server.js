@@ -121,3 +121,25 @@ app.get("/verify-payment/:reference", async (req, res) => {
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+// ✅ Fetch single ticket by ticketId
+app.get("/ticket/:ticketId", async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const client = await pool.connect();
+    const result = await client.query(
+      "SELECT selections FROM tickets WHERE ticket_id = $1",
+      [ticketId]
+    );
+    client.release();
+
+    if (result.rows.length === 0) {
+      return res.json({ match: null });
+    }
+
+    res.json({ match: result.rows[0].selections });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ match: null });
+  }
+});
