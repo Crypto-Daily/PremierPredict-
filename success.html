@@ -19,29 +19,29 @@
   </div>
 
   <script>
-    // ✅ Get ticket ID from URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const ticketId = urlParams.get("ticket");
+  // ✅ Get ticket ID from URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const ticketId = urlParams.get("ticketId"); // 🔹 fixed from "ticket"
 
-    if (ticketId) {
-      document.getElementById("ticketId").textContent = ticketId;
+  if (ticketId) {
+    document.getElementById("ticketId").textContent = ticketId;
 
-      // ✅ Fetch ONLY this ticket
-      fetch(`https://premierpredict.onrender.com/ticket/${ticketId}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.match) {
-            document.getElementById("selections").textContent = JSON.stringify(data.match, null, 2);
-          } else {
-            document.getElementById("selections").textContent = "No selections found.";
-          }
-        })
-        .catch(err => {
-          document.getElementById("selections").textContent = "Error loading ticket.";
-        });
-    } else {
-      document.querySelector(".card").innerHTML = "<h2>❌ No ticket ID found</h2>";
-    }
-  </script>
+    // ✅ Fetch ONLY this ticket
+    fetch(`https://premierpredict.onrender.com/ticket/${ticketId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.match) {
+          document.getElementById("selections").textContent = JSON.stringify(data.match, null, 2);
+        } else {
+          document.getElementById("selections").textContent = "No selections found.";
+        }
+      })
+      .catch(err => {
+        document.getElementById("selections").textContent = "Error loading ticket.";
+      });
+  } else {
+    document.querySelector(".card").innerHTML = "<h2>❌ No ticket ID found</h2>";
+  }
+    </script>
 </body>
 </html>
