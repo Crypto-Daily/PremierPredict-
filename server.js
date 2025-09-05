@@ -1,153 +1,144 @@
 import express from "express";
-import cors from "cors";
 import bodyParser from "body-parser";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
-import pkg from "pg";
+import pg from "pg";
+import cors from "cors";
+import { v4 as uuidv4 } from "uuid";
 
 dotenv.config();
 
-const { Pool } = pkg;
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// ✅ PostgreSQL connection
+const { Pool } = pg;
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }, // required for Render
+  ssl: { rejectUnauthorized: false }
 });
 
-// ✅ Create table if not exists
-(async () => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS tickets (
-        id SERIAL PRIMARY KEY,
-        ticket_id VARCHAR(20) UNIQUE NOT NULL,
-        phone VARCHAR(20) NOT NULL,
-        selections JSONB NOT NULL,
-        paid BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMP DEFAULT NOW()
-      );
-    `);
-    console.log("✅ Tickets table ready");
-  } catch (err) {
-    console.error("❌ Error creating tickets table:", err);
-  }
-})();
+const BASE_URL = process.env.BASE_URL;
+const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 
-// ✅ Step 1: Create Paystack payment
+// ✅ Test route
+app.get("/", (req, res) => {
+  res.send("PremierPredict Backend is running 🚀");
+});
+
+// ✅ Create Payment
 app.post("/create-payment", async (req, res) => {
   try {
-    const { phone, match } = req.body;
-    if (!phone || !match) {
-      return res.status(400).json({ error: "Phone and match are required" });
+    const { phone, selections } = req.body;
+
+    if (!phone || !selections) {
+      return res.status(400).json({ error: "Phone number and selections required" });
     }
 
-    // Generate ticket ID
     const ticketId = "PRE" + Math.floor(10000000 + Math.random() * 90000000);
+    const reference = uuidv4();
+    const amount = 100 * 100; // ₦100 in kobo
 
-    // Save ticket in DB (unpaid for now)
     await pool.query(
-      "INSERT INTO tickets (ticket_id, phone, selections, paid) VALUES ($1, $2, $3, $4)",
-      [ticketId, phone, JSON.stringify(match), false]
+      `INSERT INTO tickets (ticket_id, password, phone, selections, reference, amount, paid)
+       VALUES ($1, $2, $3, $4, $5, $6, FALSE)`,
+      [ticketId, "pass123", phone, JSON.stringify(selections), reference, amount]
     );
 
-    // Initialize Paystack payment
     const response = await fetch("https://api.paystack.co/transaction/initialize", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-        "Content-Type": "application/json",
+        Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
         email: `${phone}@premierpredict.com`,
-        amount: 10000, // ₦100 (in kobo)
-        reference: ticketId,
-        // ✅ FIX: include both reference + ticketId
-        callback_url: `${process.env.BASE_URL}/verify-payment?ticketId=${ticketId}&reference=${ticketId}`,
-      }),
+        amount,
+        reference,
+        callback_url: `${BASE_URL}/verify-payment?reference=${reference}&ticket=${ticketId}`
+      })
     });
 
     const data = await response.json();
+
     if (!data.status) {
-      return res.status(400).json({ error: data.message || "Failed to initialize payment" });
+      return res.status(400).json({ error: "Payment failed to initialize" });
     }
 
-    return res.json({ authorization_url: data.data.authorization_url });
+    res.json({ paymentUrl: data.data.authorization_url });
   } catch (err) {
     console.error("Create payment error:", err);
     res.status(500).json({ error: "Server error creating payment" });
   }
 });
 
-// ✅ Step 2: Verify payment
+// ✅ Verify Payment
 app.get("/verify-payment", async (req, res) => {
   try {
-    const { reference, ticketId } = req.query;
+    const { reference, ticket } = req.query;
 
-    if (!reference || !ticketId) {
-      return res.status(400).send("Missing reference or ticketId");
+    if (!reference || !ticket) {
+      return res.status(400).send("Invalid request");
     }
 
-    // Call Paystack verify API
-    const verifyRes = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+    const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+      method: "GET",
       headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-      },
+        Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+        "Content-Type": "application/json"
+      }
     });
 
-    const verifyData = await verifyRes.json();
+    const data = await response.json();
 
-    if (verifyData.status && verifyData.data.status === "success") {
-      // ✅ Mark ticket as paid in DB
-      await pool.query("UPDATE tickets SET paid = true WHERE ticket_id = $1", [ticketId]);
+    if (data.status && data.data.status === "success") {
+      // ✅ Update ticket to mark as paid
+      await pool.query(
+        "UPDATE tickets SET paid = TRUE WHERE ticket_id = $1",
+        [ticket]
+      );
 
-      // Redirect to frontend success page
       return res.redirect(
-        `https://crypto-daily.github.io/PremierPredict-/success.html?ticket=${ticketId}`
+        `https://crypto-daily.github.io/PremierPredict-/success.html?ticket=${ticket}`
+      );
+    } else {
+      return res.redirect(
+        "https://crypto-daily.github.io/PremierPredict-/failed.html"
       );
     }
-
-    return res.send("Payment verification failed");
   } catch (err) {
     console.error("Verify payment error:", err);
     res.status(500).send("Server error verifying payment");
   }
 });
 
-// ✅ Step 3: Check tickets
+// ✅ Get all tickets
 app.get("/tickets", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM tickets ORDER BY created_at DESC");
     res.json(result.rows);
   } catch (err) {
-    console.error("Error fetching tickets:", err);
-    res.status(500).json({ error: "Failed to fetch tickets" });
+    console.error("Fetch tickets error:", err);
+    res.status(500).json({ error: "Server error fetching tickets" });
   }
-});
-
-// ✅ Step 4: Get single ticket by ID (fixed column name)
-app.get("/ticket/:ticketId", async (req, res) => {
-  try {
-    const { ticketId } = req.params;
-    const result = await pool.query("SELECT * FROM tickets WHERE ticket_id = $1", [ticketId]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Ticket not found" });
-    }
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error("Error fetching ticket:", err);
-    res.status(500).json({ error: "Server error fetching ticket" });
-  }
-});
-
-app.get("/", (req, res) => {
-  res.send("PremierPredict Backend with PostgreSQL 🚀");
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, async () => {
+  console.log(`Server running on port ${PORT}`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS tickets (
+      id SERIAL PRIMARY KEY,
+      ticket_id VARCHAR(50) UNIQUE NOT NULL,
+      password VARCHAR(50) NOT NULL,
+      phone VARCHAR(20) NOT NULL,
+      selections JSONB NOT NULL,
+      reference VARCHAR(100) NOT NULL,
+      amount INT NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW(),
+      paid BOOLEAN DEFAULT FALSE
+    );
+  `);
+  console.log("✅ Tickets table ready");
+});
