@@ -3,32 +3,34 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
-import mongoose from "mongoose";
+import pkg from "pg";
 
 dotenv.config();
+const { Pool } = pkg;
+
+// ✅ PostgreSQL connection
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL || "postgresql://premierpredict_user:scdeLsN9rmFEbBxVPOVffIcQTOblozia@dpg-d2kth5ruibrs73ekv59g-a.frankfurt-postgres.render.com/premierpredict",
+  ssl: { rejectUnauthorized: false } // required for Render
+});
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// ✅ Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-  .then(() => console.log("✅ Connected to MongoDB"))
-  .catch(err => console.error("❌ MongoDB connection error:", err));
-
-// ✅ Ticket Schema
-const ticketSchema = new mongoose.Schema({
-  ticketId: String,
-  phone: String,
-  match: Object,
-  paid: { type: Boolean, default: false },
-  createdAt: { type: Date, default: Date.now },
-});
-
-const Ticket = mongoose.model("Ticket", ticketSchema);
+// ✅ Ensure table exists
+(async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS tickets (
+      id SERIAL PRIMARY KEY,
+      ticket_id VARCHAR(50) UNIQUE NOT NULL,
+      phone VARCHAR(20) NOT NULL,
+      match JSONB NOT NULL,
+      paid BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+})();
 
 // ✅ Step 1: Create Paystack payment
 app.post("/create-payment", async (req, res) => {
@@ -41,9 +43,11 @@ app.post("/create-payment", async (req, res) => {
     // Generate ticket ID
     const ticketId = "PRE" + Math.floor(10000000 + Math.random() * 90000000);
 
-    // Save ticket (unpaid for now)
-    const ticket = new Ticket({ ticketId, phone, match, paid: false });
-    await ticket.save();
+    // Save to database (unpaid)
+    await pool.query(
+      "INSERT INTO tickets (ticket_id, phone, match, paid) VALUES ($1, $2, $3, $4)",
+      [ticketId, phone, match, false]
+    );
 
     // Initialize Paystack payment
     const response = await fetch("https://api.paystack.co/transaction/initialize", {
@@ -56,7 +60,7 @@ app.post("/create-payment", async (req, res) => {
         email: `${phone}@premierpredict.com`, // Paystack requires email
         amount: 10000, // ₦100 (in kobo)
         reference: ticketId,
-        callback_url: `https://crypto-daily.github.io/PremierPredict-/success.html?ticketId=${ticketId}`,
+        callback_url: `https://crypto-daily.github.io/PremierPredict-/success.html?ticket=${ticketId}`,
       }),
     });
 
@@ -76,28 +80,22 @@ app.post("/create-payment", async (req, res) => {
 app.get("/verify-payment", async (req, res) => {
   try {
     const { reference, ticketId } = req.query;
-
     if (!reference || !ticketId) {
       return res.status(400).send("Missing reference or ticketId");
     }
 
     // Call Paystack verify API
     const verifyRes = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
-      headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-      },
+      headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
     });
 
     const verifyData = await verifyRes.json();
 
     if (verifyData.status && verifyData.data.status === "success") {
       // Mark ticket as paid in DB
-      await Ticket.findOneAndUpdate(
-        { ticketId },
-        { paid: true }
-      );
+      await pool.query("UPDATE tickets SET paid = TRUE WHERE ticket_id = $1", [ticketId]);
 
-      // Redirect to success page with ticketId
+      // Redirect to success page
       return res.redirect(`https://crypto-daily.github.io/PremierPredict-/success.html?ticket=${ticketId}`);
     }
 
@@ -108,15 +106,36 @@ app.get("/verify-payment", async (req, res) => {
   }
 });
 
-// ✅ Health check
-app.get("/", (req, res) => {
-  res.send("PremierPredict Backend is running 🚀");
+// ✅ Step 3: Fetch all tickets
+app.get("/tickets", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM tickets ORDER BY created_at DESC");
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Fetch tickets error:", err);
+    res.status(500).json({ error: "Failed to fetch tickets" });
+  }
 });
 
-// ✅ Step 3: Check tickets
-app.get("/tickets", async (req, res) => {
-  const tickets = await Ticket.find();
-  res.json(tickets);
+// ✅ Step 4: Fetch one ticket by ID
+app.get("/tickets/:ticketId", async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const result = await pool.query("SELECT * FROM tickets WHERE ticket_id = $1", [ticketId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Ticket not found" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Fetch single ticket error:", err);
+    res.status(500).json({ error: "Failed to fetch ticket" });
+  }
+});
+
+app.get("/", (req, res) => {
+  res.send("PremierPredict Backend with PostgreSQL is running 🚀");
 });
 
 const PORT = process.env.PORT || 5000;
