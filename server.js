@@ -65,7 +65,8 @@ app.post("/create-payment", async (req, res) => {
         email: `${phone}@premierpredict.com`,
         amount: 10000, // ₦100 (in kobo)
         reference: ticketId,
-        callback_url: `${process.env.BASE_URL}/verify-payment?ticketId=${ticketId}`,
+        // ✅ FIX: include both reference + ticketId
+        callback_url: `${process.env.BASE_URL}/verify-payment?ticketId=${ticketId}&reference=${ticketId}`,
       }),
     });
 
@@ -127,17 +128,11 @@ app.get("/tickets", async (req, res) => {
   }
 });
 
-app.get("/", (req, res) => {
-  res.send("PremierPredict Backend with PostgreSQL 🚀");
-});
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-// ✅ Step 4: Get single ticket by ID
+// ✅ Step 4: Get single ticket by ID (fixed column name)
 app.get("/ticket/:ticketId", async (req, res) => {
   try {
     const { ticketId } = req.params;
-    const result = await pool.query("SELECT * FROM tickets WHERE ticketId = $1", [ticketId]);
+    const result = await pool.query("SELECT * FROM tickets WHERE ticket_id = $1", [ticketId]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Ticket not found" });
@@ -149,3 +144,10 @@ app.get("/ticket/:ticketId", async (req, res) => {
     res.status(500).json({ error: "Server error fetching ticket" });
   }
 });
+
+app.get("/", (req, res) => {
+  res.send("PremierPredict Backend with PostgreSQL 🚀");
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
