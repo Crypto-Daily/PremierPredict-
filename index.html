@@ -186,7 +186,7 @@
       <button type="submit">Pay ₦100</button>    
     </form>    
   </div>    
-    <script>
+<script>
   document.getElementById("paymentForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -199,6 +199,12 @@
       if (choice) selections[`match${i}`] = choice.value;
     }
 
+    // 🚨 Require all 10 matches
+    if (Object.keys(selections).length < 10) {
+      alert("Please make sure you select all 10 matches before continuing.");
+      return;
+    }
+
     try {
       const res = await fetch("https://premierpredict.onrender.com/create-payment", {
         method: "POST",
@@ -208,9 +214,9 @@
 
       const data = await res.json();
 
-      // ✅ Correct key from backend
+      // ✅ Redirect to Paystack
       if (data.authorization_url) {
-        window.location.href = data.authorization_url; // redirect to Paystack checkout
+        window.location.href = data.authorization_url;
       } else {
         alert("Error: " + (data.error || "Payment failed"));
       }
@@ -218,6 +224,6 @@
       alert("Server error. Try again.");
     }
   });
-    </script>
+</script>
 </body>    
           </html>
