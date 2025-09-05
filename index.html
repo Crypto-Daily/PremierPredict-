@@ -215,14 +215,11 @@
       const data = await res.json();
 
       // ✅ Redirect to Paystack
-      if (data.paymentUrl) {
-        window.location.href = data.paymentUrl;
-      } else {
-        alert("Error: " + (data.error || "Payment failed"));
-      }
-    } catch (err) {
-      alert("Server error. Try again.");
-    }
+if (data.authorizationUrl) {
+  window.location.href = data.authorizationUrl;
+} else {
+  alert("Error: " + (data.error || "Payment failed"));
+  }
   });
 </script>
 </body>    
