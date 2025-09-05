@@ -22,21 +22,25 @@ const pool = new Pool({
 
 // ✅ Create tickets table if not exists
 (async () => {
-  const client = await pool.connect();
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS tickets (
-      id SERIAL PRIMARY KEY,
-      ticket_id VARCHAR(50) UNIQUE NOT NULL,
-      phone VARCHAR(20) NOT NULL,
-      selections JSONB NOT NULL,
-      reference VARCHAR(100) NOT NULL,
-      amount INTEGER NOT NULL,
-      paid BOOLEAN DEFAULT FALSE,
-      created_at TIMESTAMP DEFAULT NOW()
-    )
-  `);
-  client.release();
-  console.log("✅ Tickets table ready");
+  try {
+    const client = await pool.connect();
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tickets (
+        id SERIAL PRIMARY KEY,
+        ticket_id VARCHAR(50) UNIQUE NOT NULL,
+        phone VARCHAR(20) NOT NULL,
+        selections JSONB NOT NULL,
+        reference VARCHAR(100) NOT NULL,
+        amount INTEGER NOT NULL,
+        paid BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    client.release();
+    console.log("✅ Tickets table ready");
+  } catch (err) {
+    console.error("❌ Error creating tickets table:", err);
+  }
 })();
 
 // ✅ Create Paystack payment
@@ -61,7 +65,7 @@ app.post("/create-payment", async (req, res) => {
         email: `${phone}@premierpredict.com`,
         amount,
         metadata: { phone, selections, ticketId },
-        callback_url: "https://premierpredict.onrender.com/verify-payment" // 👈 added
+        callback_url: "https://premierpredict.onrender.com/verify-payment" // ✅ keep callback here
       }),
     });
 
@@ -88,7 +92,11 @@ app.post("/create-payment", async (req, res) => {
 // ✅ Verify payment after Paystack redirects back
 app.get("/verify-payment", async (req, res) => {
   try {
-    const { reference } = req.query; // 👈 use query param
+    const { reference } = req.query; // ✅ use query param
+
+    if (!reference) {
+      return res.redirect("https://crypto-daily.github.io/PremierPredict/failed.html");
+    }
 
     const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
       headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
@@ -119,9 +127,10 @@ app.get("/verify-payment", async (req, res) => {
     res.redirect(`https://crypto-daily.github.io/PremierPredict/success.html?ticketId=${ticketId}`);
   } catch (err) {
     console.error("Verify error:", err);
-    res.redirect("https://crypto-daily.github.io/PremierPredict-Frontend/failed.html");
+    res.redirect("https://crypto-daily.github.io/PremierPredict/failed.html");
   }
 });
+
 // ✅ Fetch single ticket by ticketId
 app.get("/ticket/:ticketId", async (req, res) => {
   try {
@@ -143,5 +152,6 @@ app.get("/ticket/:ticketId", async (req, res) => {
     res.status(500).json({ match: null });
   }
 });
+
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
