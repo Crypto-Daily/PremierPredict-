@@ -61,13 +61,17 @@ app.post("/create-payment", async (req, res) => {
         email: `${phone}@premierpredict.com`,
         amount,
         metadata: { phone, selections, ticketId },
+        callback_url: "https://premierpredict.onrender.com/verify-payment" // 👈 added
       }),
     });
 
     const data = await response.json();
 
+    // 👀 Debug log in case Paystack rejects
+    console.log("Paystack init response:", JSON.stringify(data, null, 2));
+
     if (!data.status) {
-      return res.status(400).json({ error: data.message });
+      return res.status(400).json({ error: data.message || "Paystack init failed" });
     }
 
     res.json({
@@ -82,9 +86,9 @@ app.post("/create-payment", async (req, res) => {
 });
 
 // ✅ Verify payment after Paystack redirects back
-app.get("/verify-payment/:reference", async (req, res) => {
+app.get("/verify-payment", async (req, res) => {
   try {
-    const { reference } = req.params;
+    const { reference } = req.query; // 👈 use query param
 
     const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
       headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
@@ -93,7 +97,7 @@ app.get("/verify-payment/:reference", async (req, res) => {
     const data = await response.json();
 
     if (!data.status || data.data.status !== "success") {
-      return res.redirect("https://crypto-daily.github.io/PremierPredict-Frontend/failed.html");
+      return res.redirect("https://crypto-daily.github.io/PremierPredict/failed.html");
     }
 
     const { metadata, amount } = data.data;
@@ -112,16 +116,12 @@ app.get("/verify-payment/:reference", async (req, res) => {
     client.release();
 
     // ✅ Redirect to success page with ticketId
-    res.redirect(`https://crypto-daily.github.io/PremierPredict-Frontend/success.html?ticketId=${ticketId}`);
+    res.redirect(`https://crypto-daily.github.io/PremierPredict/success.html?ticketId=${ticketId}`);
   } catch (err) {
     console.error("Verify error:", err);
     res.redirect("https://crypto-daily.github.io/PremierPredict-Frontend/failed.html");
   }
 });
-
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-
 // ✅ Fetch single ticket by ticketId
 app.get("/ticket/:ticketId", async (req, res) => {
   try {
