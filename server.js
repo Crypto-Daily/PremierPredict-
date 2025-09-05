@@ -1,144 +1,123 @@
+// server.js
 import express from "express";
+import cors from "cors";
 import bodyParser from "body-parser";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
-import pg from "pg";
-import cors from "cors";
+import pkg from "pg";
 import { v4 as uuidv4 } from "uuid";
 
 dotenv.config();
+const { Pool } = pkg;
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-const { Pool } = pg;
+// ✅ Connect to PostgreSQL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  ssl: { rejectUnauthorized: false },
 });
 
-const BASE_URL = process.env.BASE_URL;
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
+// ✅ Create tickets table if not exists
+(async () => {
+  const client = await pool.connect();
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS tickets (
+      id SERIAL PRIMARY KEY,
+      ticket_id VARCHAR(50) UNIQUE NOT NULL,
+      phone VARCHAR(20) NOT NULL,
+      selections JSONB NOT NULL,
+      reference VARCHAR(100) NOT NULL,
+      amount INTEGER NOT NULL,
+      paid BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  client.release();
+  console.log("✅ Tickets table ready");
+})();
 
-// ✅ Test route
-app.get("/", (req, res) => {
-  res.send("PremierPredict Backend is running 🚀");
-});
-
-// ✅ Create Payment
+// ✅ Create Paystack payment
 app.post("/create-payment", async (req, res) => {
   try {
     const { phone, selections } = req.body;
 
     if (!phone || !selections) {
-      return res.status(400).json({ error: "Phone number and selections required" });
+      return res.status(400).json({ error: "Phone and selections are required" });
     }
 
-    const ticketId = "PRE" + Math.floor(10000000 + Math.random() * 90000000);
-    const reference = uuidv4();
-    const amount = 100 * 100; // ₦100 in kobo
-
-    await pool.query(
-      `INSERT INTO tickets (ticket_id, password, phone, selections, reference, amount, paid)
-       VALUES ($1, $2, $3, $4, $5, $6, FALSE)`,
-      [ticketId, "pass123", phone, JSON.stringify(selections), reference, amount]
-    );
+    const amount = 10000; // ₦100 in kobo
+    const ticketId = uuidv4();
 
     const response = await fetch("https://api.paystack.co/transaction/initialize", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
-        "Content-Type": "application/json"
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         email: `${phone}@premierpredict.com`,
         amount,
-        reference,
-        callback_url: `${BASE_URL}/verify-payment?reference=${reference}&ticket=${ticketId}`
-      })
+        metadata: { phone, selections, ticketId },
+      }),
     });
 
     const data = await response.json();
 
     if (!data.status) {
-      return res.status(400).json({ error: "Payment failed to initialize" });
+      return res.status(400).json({ error: data.message });
     }
 
-    res.json({ paymentUrl: data.data.authorization_url });
+    res.json({
+      authorizationUrl: data.data.authorization_url,
+      reference: data.data.reference,
+      ticketId,
+    });
   } catch (err) {
     console.error("Create payment error:", err);
-    res.status(500).json({ error: "Server error creating payment" });
+    res.status(500).json({ error: "Server error" });
   }
 });
 
-// ✅ Verify Payment
-app.get("/verify-payment", async (req, res) => {
+// ✅ Verify payment after Paystack redirects back
+app.get("/verify-payment/:reference", async (req, res) => {
   try {
-    const { reference, ticket } = req.query;
-
-    if (!reference || !ticket) {
-      return res.status(400).send("Invalid request");
-    }
+    const { reference } = req.params;
 
     const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
-        "Content-Type": "application/json"
-      }
+      headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
     });
 
     const data = await response.json();
 
-    if (data.status && data.data.status === "success") {
-      // ✅ Update ticket to mark as paid
-      await pool.query(
-        "UPDATE tickets SET paid = TRUE WHERE ticket_id = $1",
-        [ticket]
-      );
-
-      return res.redirect(
-        `https://crypto-daily.github.io/PremierPredict-/success.html?ticket=${ticket}`
-      );
-    } else {
-      return res.redirect(
-        "https://crypto-daily.github.io/PremierPredict-/failed.html"
-      );
+    if (!data.status || data.data.status !== "success") {
+      return res.redirect("https://crypto-daily.github.io/PremierPredict-Frontend/failed.html");
     }
-  } catch (err) {
-    console.error("Verify payment error:", err);
-    res.status(500).send("Server error verifying payment");
-  }
-});
 
-// ✅ Get all tickets
-app.get("/tickets", async (req, res) => {
-  try {
-    const result = await pool.query("SELECT * FROM tickets ORDER BY created_at DESC");
-    res.json(result.rows);
-  } catch (err) {
-    console.error("Fetch tickets error:", err);
-    res.status(500).json({ error: "Server error fetching tickets" });
-  }
-});
+    const { metadata, amount } = data.data;
+    const ticketId = metadata.ticketId;
+    const phone = metadata.phone;
+    const selections = metadata.selections;
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, async () => {
-  console.log(`Server running on port ${PORT}`);
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS tickets (
-      id SERIAL PRIMARY KEY,
-      ticket_id VARCHAR(50) UNIQUE NOT NULL,
-      password VARCHAR(50) NOT NULL,
-      phone VARCHAR(20) NOT NULL,
-      selections JSONB NOT NULL,
-      reference VARCHAR(100) NOT NULL,
-      amount INT NOT NULL,
-      created_at TIMESTAMP DEFAULT NOW(),
-      paid BOOLEAN DEFAULT FALSE
+    // ✅ Save ticket into DB
+    const client = await pool.connect();
+    await client.query(
+      `INSERT INTO tickets (ticket_id, phone, selections, reference, amount, paid)
+       VALUES ($1, $2, $3, $4, $5, true)
+       ON CONFLICT (ticket_id) DO NOTHING`,
+      [ticketId, phone, JSON.stringify(selections), reference, amount]
     );
-  `);
-  console.log("✅ Tickets table ready");
+    client.release();
+
+    // ✅ Redirect to success page with ticketId
+    res.redirect(`https://crypto-daily.github.io/PremierPredict-Frontend/success.html?ticketId=${ticketId}`);
+  } catch (err) {
+    console.error("Verify error:", err);
+    res.redirect("https://crypto-daily.github.io/PremierPredict-Frontend/failed.html");
+  }
 });
+
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
