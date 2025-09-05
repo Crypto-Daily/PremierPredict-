@@ -143,3 +143,5 @@ app.get("/ticket/:ticketId", async (req, res) => {
     res.status(500).json({ match: null });
   }
 });
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
