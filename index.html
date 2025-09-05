@@ -209,14 +209,14 @@
       const res = await fetch("https://premierpredict.onrender.com/create-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, match: selections })
+        body: JSON.stringify({ phone, selections }) // ✅ fixed
       });
 
       const data = await res.json();
 
       // ✅ Redirect to Paystack
-      if (data.authorization_url) {
-        window.location.href = data.authorization_url;
+      if (data.paymentUrl) {
+        window.location.href = data.paymentUrl;
       } else {
         alert("Error: " + (data.error || "Payment failed"));
       }
