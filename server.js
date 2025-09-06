@@ -92,9 +92,11 @@ app.post("/create-payment", async (req, res) => {
 // ✅ Verify payment after Paystack redirects back
 app.get("/verify-payment", async (req, res) => {
   try {
-    const { reference } = req.query; // ✅ use query param
+    // Paystack may send reference in query or body
+    const reference = req.query.reference || req.body?.reference;
 
     if (!reference) {
+      console.error("❌ No reference found in Paystack callback");
       return res.redirect("https://crypto-daily.github.io/PremierPredict/failed.html");
     }
 
@@ -105,6 +107,7 @@ app.get("/verify-payment", async (req, res) => {
     const data = await response.json();
 
     if (!data.status || data.data.status !== "success") {
+      console.error("❌ Payment verification failed:", data);
       return res.redirect("https://crypto-daily.github.io/PremierPredict/failed.html");
     }
 
@@ -123,6 +126,7 @@ app.get("/verify-payment", async (req, res) => {
     );
     client.release();
 
+    console.log(`✅ Payment verified for ticket: ${ticketId}`);
     // ✅ Redirect to success page with ticketId
     res.redirect(`https://crypto-daily.github.io/PremierPredict/success.html?ticketId=${ticketId}`);
   } catch (err) {
