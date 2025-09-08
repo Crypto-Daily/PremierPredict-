@@ -1,46 +1,47 @@
+// routes/wallet.js
 import express from "express";
 import jwt from "jsonwebtoken";
-import db from "../db.js";
+import pool from "../db.js";
 
 const router = express.Router();
 
-// Middleware to verify JWT
+// Middleware to check auth
 function authMiddleware(req, res, next) {
-  const token = req.headers.authorization?.split(" ")[1];
+  const token = req.headers["authorization"];
   if (!token) return res.status(401).json({ error: "No token provided" });
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) return res.status(403).json({ error: "Invalid token" });
+  try {
+    const decoded = jwt.verify(token.split(" ")[1], process.env.JWT_SECRET);
     req.userId = decoded.id;
     next();
-  });
+  } catch {
+    res.status(401).json({ error: "Invalid token" });
+  }
 }
 
-// Get balance
+// Get wallet balance
 router.get("/balance", authMiddleware, async (req, res) => {
   try {
-    const [rows] = await db.query("SELECT balance FROM users WHERE id = ?", [
-      req.userId,
-    ]);
-    res.json({ balance: rows[0].balance });
+    const result = await pool.query("SELECT balance FROM users WHERE id=$1", [req.userId]);
+    res.json({ balance: result.rows[0].balance });
   } catch (err) {
-    console.error("Balance error:", err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Deposit (dummy for now, Paystack integration later)
+// Fake deposit (for testing)
 router.post("/deposit", authMiddleware, async (req, res) => {
   try {
     const { amount } = req.body;
-    await db.query("UPDATE users SET balance = balance + ? WHERE id = ?", [
+
+    await pool.query("UPDATE users SET balance = balance + $1 WHERE id=$2", [
       amount,
       req.userId,
     ]);
+
     res.json({ message: "Deposit successful" });
   } catch (err) {
-    console.error("Deposit error:", err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: err.message });
   }
 });
 
