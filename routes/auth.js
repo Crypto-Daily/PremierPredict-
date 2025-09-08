@@ -1,54 +1,64 @@
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import db from "../db.js";
+import db from "../db.js";  // your db connection
+import dotenv from "dotenv";
 
+dotenv.config();
 const router = express.Router();
 
-// Register
+// ✅ REGISTER
 router.post("/register", async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
-    if (!username || !email || !password) {
-      return res.status(400).json({ error: "All fields required" });
+    // check if user already exists
+    const userCheck = await db.query("SELECT * FROM users WHERE email = $1", [email]);
+    if (userCheck.rows.length > 0) {
+      return res.status(400).json({ error: "Email already registered" });
     }
 
-    const hashed = await bcrypt.hash(password, 10);
+    // hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    await db.query(
-      "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
-      [username, email, hashed]
+    // insert new user
+    const result = await db.query(
+      "INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id, username, email",
+      [username, email, hashedPassword]
     );
 
-    res.json({ message: "User registered successfully" });
+    res.json({ message: "User registered successfully", user: result.rows[0] });
   } catch (err) {
-    console.error("Register error:", err);
+    console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
-// Login
+// ✅ LOGIN
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [
-      email,
-    ]);
-    if (rows.length === 0) return res.status(400).json({ error: "Invalid credentials" });
+    // find user
+    const result = await db.query("SELECT * FROM users WHERE email = $1", [email]);
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: "Invalid credentials" });
+    }
 
-    const user = rows[0];
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(400).json({ error: "Invalid credentials" });
+    const user = result.rows[0];
 
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-      expiresIn: "1d",
-    });
+    // compare password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ error: "Invalid credentials" });
+    }
 
-    res.json({ token });
+    // generate JWT
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+
+    res.json({ message: "Login successful", token });
   } catch (err) {
-    console.error("Login error:", err);
+    console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 });
