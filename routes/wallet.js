@@ -61,15 +61,4 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
   }
 });
 
-export default router;    await pool.query("UPDATE users SET balance = balance + $1 WHERE id=$2", [
-      amount,
-      req.userId,
-    ]);
-
-    res.json({ message: "Deposit successful" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 export default router;
