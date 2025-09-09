@@ -7,7 +7,9 @@ import jackpotRoutes from "./routes/jackpot.js";
 import { authMiddleware } from "./middleware/authMiddleware.js";
 
 dotenv.config();
-app.use(express.json());
+app.use(express.json()); 
+
+const app = express();
 
 // Routes
 app.use("/api/auth", authRoutes);
@@ -19,7 +21,6 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
 
-const app = express();
 
 app.get("/api/protected", authMiddleware, (req, res) => {
   res.json({ message: `Hello ${req.user.id}, you have access!` });
