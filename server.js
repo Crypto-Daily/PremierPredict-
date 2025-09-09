@@ -7,8 +7,6 @@ import jackpotRoutes from "./routes/jackpot.js";
 import { authMiddleware } from "./middleware/authMiddleware.js";
 
 dotenv.config();
-
-const app = express();
 app.use(express.json());
 
 // Routes
