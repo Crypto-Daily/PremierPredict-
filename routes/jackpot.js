@@ -1,40 +1,40 @@
 // routes/jackpot.js
 import express from "express";
-import jwt from "jsonwebtoken";
 import pool from "../db.js";
+import { authMiddleware } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-function authMiddleware(req, res, next) {
-  const token = req.headers["authorization"];
-  if (!token) return res.status(401).json({ error: "No token provided" });
-
+// Join jackpot with predictions
+router.post("/join", authMiddleware, async (req, res) => {
   try {
-    const decoded = jwt.verify(token.split(" ")[1], process.env.JWT_SECRET);
-    req.userId = decoded.id;
-    next();
-  } catch {
-    res.status(401).json({ error: "Invalid token" });
-  }
-}
+    const { predictions } = req.body; // should be array of 10 match predictions
+    if (!predictions || predictions.length !== 10) {
+      return res.status(400).json({ error: "You must provide 10 predictions" });
+    }
 
-// Place a bet
-router.post("/bet", authMiddleware, async (req, res) => {
-  try {
-    const { round_id, match_id, prediction, stake_kobo } = req.body;
-
-    // Deduct stake from wallet
-    await pool.query("UPDATE users SET balance = balance - $1 WHERE id=$2", [
-      stake_kobo,
-      req.userId,
-    ]);
-
-    // Save bet
-    const bet = await pool.query(
-      "INSERT INTO bets (user_id, round_id, match_id, prediction, stake_kobo) VALUES ($1,$2,$3,$4,$5) RETURNING *",
-      [req.userId, round_id, match_id, prediction, stake_kobo]
+    const { rows } = await pool.query(
+      "INSERT INTO jackpots (user_id, predictions) VALUES ($1, $2) RETURNING *",
+      [req.user.id, predictions]
     );
 
+    res.json({ message: "Joined jackpot successfully", jackpot: rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get my jackpot history
+router.get("/history", authMiddleware, async (req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT * FROM jackpots WHERE user_id = $1", [req.user.id]);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+export default router;
     res.json({ bet: bet.rows[0] });
   } catch (err) {
     res.status(500).json({ error: err.message });
