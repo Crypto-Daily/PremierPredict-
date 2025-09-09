@@ -1,1 +1,16 @@
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body onload="loadDashboard()">
+  <div class="container">
+    <h2>Dashboard</h2>
+    <p id="dashboard">Loading...</p>
+    <a href="index.html" onclick="localStorage.removeItem('token')">Logout</a>
+  </div>
+</body>
+</html>
