@@ -35,10 +35,3 @@ router.get("/history", authMiddleware, async (req, res) => {
 });
 
 export default router;
-    res.json({ bet: bet.rows[0] });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-export default router;
