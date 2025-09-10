@@ -39,14 +39,15 @@
         });
 
         const data = await res.json();
-        if (data.user) {
+
+        if (res.ok) {
           alert("✅ Registration successful! Please login.");
           window.location.href = "index.html";
         } else {
-          alert("❌ Registration failed!");
+          alert("❌ " + (data.message || "Registration failed!"));
         }
       } catch (err) {
-        alert("❌ Error connecting to server!");
+        alert("⚠️ Error connecting to server!");
         console.error(err);
       }
     });
