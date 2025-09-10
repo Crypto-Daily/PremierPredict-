@@ -19,7 +19,7 @@
     <input type="password" id="password" placeholder="Password" required>
     <button type="submit">Login</button>
   </form>
-  <p>Don't have an account? <a href="register.html">Register here</a></p>
+  <p>Don’t have an account? <a href="register.html">Register here</a></p>
 
   <script>
     const API_URL = "https://premierpredict.onrender.com/api";
@@ -41,15 +41,16 @@
         });
 
         const data = await res.json();
-        if (data.token) {
+
+        if (res.ok && data.token) {
           saveToken(data.token);
           alert("✅ Login successful!");
           window.location.href = "dashboard.html";
         } else {
-          alert("❌ Login failed!");
+          alert("❌ " + (data.message || "Login failed!"));
         }
       } catch (err) {
-        alert("❌ Error connecting to server!");
+        alert("⚠️ Error connecting to server!");
         console.error(err);
       }
     });
