@@ -28,23 +28,40 @@
   <script>
     const API_URL = "https://premierpredict.onrender.com/api";
 
-    function getToken() { return localStorage.getItem("token"); }
-    function logout() { localStorage.removeItem("token"); window.location.href = "index.html"; }
+    function getToken() {
+      return localStorage.getItem("token");
+    }
+
+    function logout() {
+      localStorage.removeItem("token");
+      window.location.href = "index.html";
+    }
 
     document.getElementById("logoutBtn").addEventListener("click", logout);
 
     async function loadDashboard() {
       const token = getToken();
-      if (!token) { alert("⚠ Please login first."); window.location.href = "index.html"; return; }
+      if (!token) {
+        alert("⚠ Please login first.");
+        window.location.href = "index.html";
+        return;
+      }
 
       try {
         const res = await fetch(`${API_URL}/protected`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+
         const data = await res.json();
-        document.getElementById("dashboardMessage").innerText = data.message || "Welcome!";
+
+        if (res.ok) {
+          document.getElementById("dashboardMessage").innerText = data.message || "Welcome!";
+        } else {
+          alert("❌ " + (data.message || "Session expired, please login again."));
+          logout();
+        }
       } catch (err) {
-        alert("❌ Error fetching dashboard data");
+        alert("⚠ Error connecting to server!");
         console.error(err);
       }
     }
