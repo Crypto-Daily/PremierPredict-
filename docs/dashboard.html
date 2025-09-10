@@ -2,15 +2,45 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Dashboard</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="script.js" defer></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - PremierPredict</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 2rem; background: #f5f5f5; text-align: center; }
+    button { padding: 0.5rem 1rem; margin-top: 1rem; cursor: pointer; }
+  </style>
 </head>
-<body onload="loadDashboard()">
-  <div class="container">
-    <h2>Dashboard</h2>
-    <p id="dashboard">Loading...</p>
-    <a href="index.html" onclick="localStorage.removeItem('token')">Logout</a>
-  </div>
+<body>
+
+  <h2>Dashboard</h2>
+  <div id="dashboard">Loading your dashboard...</div>
+  <button id="logoutBtn">Logout</button>
+
+  <script>
+    const API_URL = "https://premierpredict.onrender.com/api";
+
+    function getToken() { return localStorage.getItem("token"); }
+    function logout() { localStorage.removeItem("token"); window.location.href = "index.html"; }
+
+    document.getElementById("logoutBtn").addEventListener("click", logout);
+
+    async function loadDashboard() {
+      const token = getToken();
+      if (!token) { alert("⚠ Please login first."); window.location.href = "index.html"; return; }
+
+      try {
+        const res = await fetch(`${API_URL}/protected`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        document.getElementById("dashboard").innerText = data.message || "Welcome!";
+      } catch (err) {
+        alert("❌ Error loading dashboard.");
+        console.error(err);
+      }
+    }
+
+    loadDashboard();
+  </script>
+
 </body>
 </html>
