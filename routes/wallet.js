@@ -1,8 +1,8 @@
-// routes/wallet.js
 import express from "express";
 import pool from "../db.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import axios from "axios";
+import crypto from "crypto";
 
 const router = express.Router();
 
@@ -60,7 +60,7 @@ router.post("/deposit/initiate", authMiddleware, async (req, res) => {
 });
 
 /**
- * ✅ Verify Paystack Payment
+ * ✅ Verify Paystack Payment (manual verify)
  */
 router.post("/deposit/verify", authMiddleware, async (req, res) => {
   try {
@@ -74,7 +74,7 @@ router.post("/deposit/verify", authMiddleware, async (req, res) => {
       }
     );
 
-    console.log("Verification response:", response.data); // 🔎 Debugging
+    console.log("Verification response:", response.data);
 
     const data = response.data.data;
 
@@ -99,6 +99,41 @@ router.post("/deposit/verify", authMiddleware, async (req, res) => {
     console.error("Paystack verify error:", err.response?.data || err.message);
     res.status(500).json({ error: "Verification failed" });
   }
+});
+
+/**
+ * ✅ Webhook (Paystack calls this automatically)
+ */
+router.post("/webhook", express.json({ type: "application/json" }), async (req, res) => {
+  const secret = process.env.PAYSTACK_SECRET_KEY;
+  const hash = crypto
+    .createHmac("sha512", secret)
+    .update(JSON.stringify(req.body))
+    .digest("hex");
+
+  if (hash !== req.headers["x-paystack-signature"]) {
+    return res.status(401).send("Invalid signature");
+  }
+
+  const event = req.body;
+
+  if (event.event === "charge.success") {
+    const data = event.data;
+    const amount = data.amount / 100;
+    const userId = data.metadata.userId;
+
+    try {
+      await pool.query(
+        `UPDATE wallets SET balance = balance + $1 WHERE user_id = $2`,
+        [amount, userId]
+      );
+      console.log(`✅ Webhook: Credited ₦${amount} to user ${userId}`);
+    } catch (err) {
+      console.error("Webhook DB error:", err.message);
+    }
+  }
+
+  res.sendStatus(200);
 });
 
 /**
