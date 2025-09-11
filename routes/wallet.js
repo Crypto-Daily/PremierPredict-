@@ -6,9 +6,7 @@ import crypto from "crypto";
 
 const router = express.Router();
 
-/**
- * ✅ Get wallet balance
- */
+// ✅ Get wallet balance
 router.get("/balance", authMiddleware, async (req, res) => {
   try {
     const { rows } = await pool.query("SELECT balance FROM wallets WHERE user_id = $1", [req.user.id]);
@@ -21,9 +19,7 @@ router.get("/balance", authMiddleware, async (req, res) => {
   }
 });
 
-/**
- * ✅ Initialize Paystack Deposit
- */
+// ✅ Initialize Paystack Deposit
 router.post("/deposit/initiate", authMiddleware, async (req, res) => {
   try {
     const { amount } = req.body;
@@ -31,17 +27,20 @@ router.post("/deposit/initiate", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Invalid amount" });
     }
 
+    // Get user email
     const userEmailQuery = await pool.query("SELECT email FROM users WHERE id = $1", [req.user.id]);
     if (userEmailQuery.rows.length === 0) {
       return res.status(404).json({ error: "User not found" });
     }
     const email = userEmailQuery.rows[0].email;
 
+    // ✅ include callback_url so user comes back to wallet.html
     const response = await axios.post(
       "https://api.paystack.co/transaction/initialize",
       {
         email,
-        amount: amount * 100, // Paystack uses kobo
+        amount: amount * 100, // Paystack expects kobo
+        callback_url: "https://premierpredict.onrender.com/wallet.html",
         metadata: { userId: req.user.id }
       },
       {
@@ -54,14 +53,12 @@ router.post("/deposit/initiate", authMiddleware, async (req, res) => {
 
     res.json({ authorizationUrl: response.data.data.authorization_url });
   } catch (err) {
-    console.error("Paystack init error:", err.response?.data || err.message);
+    console.error(err.response?.data || err.message);
     res.status(500).json({ error: "Failed to initialize payment" });
   }
 });
 
-/**
- * ✅ Verify Paystack Payment (manual verify)
- */
+// ✅ Verify Paystack Payment
 router.post("/deposit/verify", authMiddleware, async (req, res) => {
   try {
     const { reference } = req.body;
@@ -74,13 +71,13 @@ router.post("/deposit/verify", authMiddleware, async (req, res) => {
       }
     );
 
-    console.log("Verification response:", response.data);
-
     const data = response.data.data;
 
     if (data.status === "success") {
       const amount = data.amount / 100;
-      const userId = data.metadata.userId;
+
+      // ✅ Use Paystack metadata if available, else fallback to logged-in user
+      const userId = data.metadata?.userId || req.user.id;
 
       const updated = await pool.query(
         `UPDATE wallets SET balance = balance + $1 WHERE user_id = $2 RETURNING balance`,
@@ -96,49 +93,49 @@ router.post("/deposit/verify", authMiddleware, async (req, res) => {
       res.json({ success: false, message: "Payment not successful" });
     }
   } catch (err) {
-    console.error("Paystack verify error:", err.response?.data || err.message);
+    console.error("❌ Verification error:", err.response?.data || err.message);
     res.status(500).json({ error: "Verification failed" });
   }
 });
 
-/**
- * ✅ Webhook (Paystack calls this automatically)
- */
+// ✅ Paystack Webhook
 router.post("/webhook", express.json({ type: "application/json" }), async (req, res) => {
-  const secret = process.env.PAYSTACK_SECRET_KEY;
-  const hash = crypto
-    .createHmac("sha512", secret)
-    .update(JSON.stringify(req.body))
-    .digest("hex");
+  try {
+    const secret = process.env.PAYSTACK_SECRET_KEY;
 
-  if (hash !== req.headers["x-paystack-signature"]) {
-    return res.status(401).send("Invalid signature");
-  }
+    // ✅ Verify webhook signature
+    const hash = crypto
+      .createHmac("sha512", secret)
+      .update(JSON.stringify(req.body))
+      .digest("hex");
 
-  const event = req.body;
+    if (hash !== req.headers["x-paystack-signature"]) {
+      return res.sendStatus(401); // Invalid signature
+    }
 
-  if (event.event === "charge.success") {
-    const data = event.data;
-    const amount = data.amount / 100;
-    const userId = data.metadata.userId;
+    const event = req.body;
 
-    try {
+    if (event.event === "charge.success") {
+      const data = event.data;
+      const amount = data.amount / 100;
+      const userId = data.metadata.userId;
+
       await pool.query(
-        `UPDATE wallets SET balance = balance + $1 WHERE user_id = $2`,
+        `UPDATE wallets SET balance = balance + $1 WHERE user_id = $2 RETURNING balance`,
         [amount, userId]
       );
-      console.log(`✅ Webhook: Credited ₦${amount} to user ${userId}`);
-    } catch (err) {
-      console.error("Webhook DB error:", err.message);
-    }
-  }
 
-  res.sendStatus(200);
+      console.log(`✅ Webhook deposit: ₦${amount} credited to user ${userId}`);
+    }
+
+    res.sendStatus(200); // acknowledge Paystack
+  } catch (err) {
+    console.error("❌ Webhook error:", err.message);
+    res.sendStatus(500);
+  }
 });
 
-/**
- * ✅ Withdraw funds
- */
+// ✅ Withdraw funds
 router.post("/withdraw", authMiddleware, async (req, res) => {
   try {
     const { amount } = req.body;
