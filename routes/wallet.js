@@ -2,6 +2,7 @@ import express from "express";
 import pool from "../db.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import axios from "axios";
+import crypto from "crypto";
 
 const router = express.Router();
 
@@ -26,20 +27,20 @@ router.post("/deposit/initiate", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Invalid amount" });
     }
 
-    // get user email
+    // Get user email
     const userEmailQuery = await pool.query("SELECT email FROM users WHERE id = $1", [req.user.id]);
     if (userEmailQuery.rows.length === 0) {
       return res.status(404).json({ error: "User not found" });
     }
     const email = userEmailQuery.rows[0].email;
 
-    // ✅ include callback_url
+    // ✅ include callback_url so user comes back to wallet.html
     const response = await axios.post(
       "https://api.paystack.co/transaction/initialize",
       {
         email,
         amount: amount * 100, // Paystack expects kobo
-        callback_url: "https://premierpredict.onrender.com/wallet.html", // ✅ redirect after payment
+        callback_url: "https://premierpredict.onrender.com/wallet.html",
         metadata: { userId: req.user.id }
       },
       {
@@ -74,7 +75,9 @@ router.post("/deposit/verify", authMiddleware, async (req, res) => {
 
     if (data.status === "success") {
       const amount = data.amount / 100;
-      const userId = data.metadata.userId;
+
+      // ✅ Use Paystack metadata if available, else fallback to logged-in user
+      const userId = data.metadata?.userId || req.user.id;
 
       const updated = await pool.query(
         `UPDATE wallets SET balance = balance + $1 WHERE user_id = $2 RETURNING balance`,
@@ -90,6 +93,7 @@ router.post("/deposit/verify", authMiddleware, async (req, res) => {
       res.json({ success: false, message: "Payment not successful" });
     }
   } catch (err) {
+    console.error("❌ Verification error:", err.response?.data || err.message);
     res.status(500).json({ error: "Verification failed" });
   }
 });
@@ -97,31 +101,41 @@ router.post("/deposit/verify", authMiddleware, async (req, res) => {
 // ✅ Paystack Webhook
 router.post("/webhook", express.json({ type: "application/json" }), async (req, res) => {
   try {
+    const secret = process.env.PAYSTACK_SECRET_KEY;
+
+    // ✅ Verify webhook signature
+    const hash = crypto
+      .createHmac("sha512", secret)
+      .update(JSON.stringify(req.body))
+      .digest("hex");
+
+    if (hash !== req.headers["x-paystack-signature"]) {
+      return res.sendStatus(401); // Invalid signature
+    }
+
     const event = req.body;
 
-    // Paystack will send different events, we only care about successful charge
     if (event.event === "charge.success") {
       const data = event.data;
-      const amount = data.amount / 100; // convert from kobo
+      const amount = data.amount / 100;
       const userId = data.metadata.userId;
 
-      // Update wallet balance
       await pool.query(
         `UPDATE wallets SET balance = balance + $1 WHERE user_id = $2 RETURNING balance`,
         [amount, userId]
       );
 
-      console.log(`✅ Webhook deposit: ${amount} credited to user ${userId}`);
+      console.log(`✅ Webhook deposit: ₦${amount} credited to user ${userId}`);
     }
 
-    res.sendStatus(200); // Acknowledge receipt
+    res.sendStatus(200); // acknowledge Paystack
   } catch (err) {
     console.error("❌ Webhook error:", err.message);
     res.sendStatus(500);
   }
 });
 
-// ✅ Withdraw funds (your existing logic)
+// ✅ Withdraw funds
 router.post("/withdraw", authMiddleware, async (req, res) => {
   try {
     const { amount } = req.body;
