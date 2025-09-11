@@ -94,6 +94,33 @@ router.post("/deposit/verify", authMiddleware, async (req, res) => {
   }
 });
 
+// ✅ Paystack Webhook
+router.post("/webhook", express.json({ type: "application/json" }), async (req, res) => {
+  try {
+    const event = req.body;
+
+    // Paystack will send different events, we only care about successful charge
+    if (event.event === "charge.success") {
+      const data = event.data;
+      const amount = data.amount / 100; // convert from kobo
+      const userId = data.metadata.userId;
+
+      // Update wallet balance
+      await pool.query(
+        `UPDATE wallets SET balance = balance + $1 WHERE user_id = $2 RETURNING balance`,
+        [amount, userId]
+      );
+
+      console.log(`✅ Webhook deposit: ${amount} credited to user ${userId}`);
+    }
+
+    res.sendStatus(200); // Acknowledge receipt
+  } catch (err) {
+    console.error("❌ Webhook error:", err.message);
+    res.sendStatus(500);
+  }
+});
+
 // ✅ Withdraw funds (your existing logic)
 router.post("/withdraw", authMiddleware, async (req, res) => {
   try {
