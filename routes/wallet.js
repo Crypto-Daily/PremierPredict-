@@ -26,17 +26,20 @@ router.post("/deposit/initiate", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Invalid amount" });
     }
 
+    // get user email
     const userEmailQuery = await pool.query("SELECT email FROM users WHERE id = $1", [req.user.id]);
     if (userEmailQuery.rows.length === 0) {
       return res.status(404).json({ error: "User not found" });
     }
     const email = userEmailQuery.rows[0].email;
 
+    // ✅ include callback_url
     const response = await axios.post(
       "https://api.paystack.co/transaction/initialize",
       {
         email,
         amount: amount * 100, // Paystack expects kobo
+        callback_url: "https://premierpredict.onrender.com/wallet.html", // ✅ redirect after payment
         metadata: { userId: req.user.id }
       },
       {
@@ -49,6 +52,7 @@ router.post("/deposit/initiate", authMiddleware, async (req, res) => {
 
     res.json({ authorizationUrl: response.data.data.authorization_url });
   } catch (err) {
+    console.error(err.response?.data || err.message);
     res.status(500).json({ error: "Failed to initialize payment" });
   }
 });
