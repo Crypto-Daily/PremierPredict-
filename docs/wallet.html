@@ -51,7 +51,11 @@
     // ✅ Load wallet balance
     async function loadWallet() {
       const token = getToken();
-      if (!token) { alert("⚠ Please login first."); window.location.href = "index.html"; return; }
+      if (!token) { 
+        alert("⚠ Please login first."); 
+        window.location.href = "index.html"; 
+        return; 
+      }
 
       try {
         const res = await fetch(`${API_URL}/wallet/balance`, {
@@ -60,12 +64,12 @@
         const data = await res.json();
         document.getElementById("balance").innerText = formatMoney(data.balance || 0);
       } catch (err) {
-        alert("❌ Error fetching wallet data");
         console.error(err);
+        alert("❌ Error fetching wallet data");
       }
     }
 
-    // ✅ Deposit with Paystack (redirect flow)
+    // ✅ Deposit with Paystack
     async function depositFunds() {
       const token = getToken();
       const amount = parseFloat(document.getElementById("depositAmount").value);
@@ -83,13 +87,14 @@
 
         const data = await res.json();
         if (data.authorizationUrl) {
-          window.location.href = data.authorizationUrl; // go to Paystack
+          // ✅ redirect to Paystack checkout
+          window.location.href = data.authorizationUrl;
         } else {
           alert("❌ Deposit initiation failed");
         }
       } catch (err) {
-        alert("❌ Error connecting to server");
         console.error(err);
+        alert("❌ Error connecting to server");
       }
     }
 
@@ -114,19 +119,15 @@
           alert("✅ Withdrawal successful!");
           loadWallet();
         } else {
-          alert("❌ Withdrawal failed: " + (data.message || "try again"));
+          alert("❌ Withdrawal failed: " + (data.error || "try again"));
         }
       } catch (err) {
-        alert("❌ Error connecting to server");
         console.error(err);
+        alert("❌ Error connecting to server");
       }
     }
 
-    // Add button listeners
-    document.getElementById("depositBtn").addEventListener("click", depositFunds);
-    document.getElementById("withdrawBtn").addEventListener("click", withdrawFunds);
-
-    // ✅ Handle Paystack callback (verify payment)
+    // ✅ Handle Paystack redirect (verify deposit)
     const urlParams = new URLSearchParams(window.location.search);
     const reference = urlParams.get("reference");
     if (reference) {
@@ -145,18 +146,22 @@
           if (data.success) {
             alert("✅ Deposit verified and balance updated!");
             loadWallet();
-
-            // Clean URL after verification
-            window.history.replaceState({}, document.title, "wallet.html");
           } else {
             alert("❌ Payment verification failed");
           }
+
+          // ✅ clean the URL (remove ?reference=...)
+          window.history.replaceState({}, document.title, "wallet.html");
         } catch (err) {
-          alert("❌ Error verifying payment");
           console.error(err);
+          alert("❌ Error verifying payment");
         }
       })();
     }
+
+    // Event listeners
+    document.getElementById("depositBtn").addEventListener("click", depositFunds);
+    document.getElementById("withdrawBtn").addEventListener("click", withdrawFunds);
 
     // Initial load
     loadWallet();
