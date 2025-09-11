@@ -25,7 +25,7 @@
 
   <div class="container">
     <h2>My Wallet</h2>
-    <p>Balance: <span id="balance">Loading...</span></p>
+    <p>Balance: <span id="balance">₦0.00</span></p>
 
     <h3>Deposit Funds</h3>
     <input type="number" id="depositAmount" placeholder="Amount">
@@ -43,6 +43,11 @@
     function logout() { localStorage.removeItem("token"); window.location.href = "index.html"; }
     document.getElementById("logoutBtn").addEventListener("click", logout);
 
+    // ✅ Format money with ₦
+    function formatMoney(amount) {
+      return "₦" + Number(amount).toLocaleString("en-NG", { minimumFractionDigits: 2 });
+    }
+
     // ✅ Load wallet balance
     async function loadWallet() {
       const token = getToken();
@@ -53,7 +58,7 @@
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        document.getElementById("balance").innerText = data.balance || "0";
+        document.getElementById("balance").innerText = formatMoney(data.balance || 0);
       } catch (err) {
         alert("❌ Error fetching wallet data");
         console.error(err);
@@ -63,8 +68,8 @@
     // ✅ Deposit with Paystack (redirect flow)
     async function depositFunds() {
       const token = getToken();
-      const amount = document.getElementById("depositAmount").value;
-      if (!amount) return alert("Enter an amount");
+      const amount = parseFloat(document.getElementById("depositAmount").value);
+      if (!amount || amount <= 0) return alert("Enter a valid amount");
 
       try {
         const res = await fetch(`${API_URL}/wallet/deposit/initiate`, {
@@ -78,8 +83,7 @@
 
         const data = await res.json();
         if (data.authorizationUrl) {
-          // Redirect user to Paystack payment page
-          window.location.href = data.authorizationUrl;
+          window.location.href = data.authorizationUrl; // go to Paystack
         } else {
           alert("❌ Deposit initiation failed");
         }
@@ -92,8 +96,8 @@
     // ✅ Withdraw funds
     async function withdrawFunds() {
       const token = getToken();
-      const amount = document.getElementById("withdrawAmount").value;
-      if (!amount) return alert("Enter an amount");
+      const amount = parseFloat(document.getElementById("withdrawAmount").value);
+      if (!amount || amount <= 0) return alert("Enter a valid amount");
 
       try {
         const res = await fetch(`${API_URL}/wallet/withdraw`, {
@@ -110,7 +114,7 @@
           alert("✅ Withdrawal successful!");
           loadWallet();
         } else {
-          alert("❌ Withdrawal failed");
+          alert("❌ Withdrawal failed: " + (data.message || "try again"));
         }
       } catch (err) {
         alert("❌ Error connecting to server");
@@ -122,11 +126,10 @@
     document.getElementById("depositBtn").addEventListener("click", depositFunds);
     document.getElementById("withdrawBtn").addEventListener("click", withdrawFunds);
 
-    // ✅ Check if Paystack redirected back with reference
+    // ✅ Handle Paystack callback (verify payment)
     const urlParams = new URLSearchParams(window.location.search);
     const reference = urlParams.get("reference");
     if (reference) {
-      // Verify deposit
       (async () => {
         const token = getToken();
         try {
@@ -142,6 +145,9 @@
           if (data.success) {
             alert("✅ Deposit verified and balance updated!");
             loadWallet();
+
+            // Clean URL after verification
+            window.history.replaceState({}, document.title, "wallet.html");
           } else {
             alert("❌ Payment verification failed");
           }
