@@ -58,12 +58,13 @@ router.post("/deposit/initiate", authMiddleware, async (req, res) => {
   }
 });
 
-// ✅ Verify Paystack Payment
+// ✅ Verify Paystack Payment (direct wallet update like test mode)
 router.post("/deposit/verify", authMiddleware, async (req, res) => {
   try {
     const { reference } = req.body;
     if (!reference) return res.status(400).json({ error: "Missing reference" });
 
+    // Call Paystack verify API
     const response = await axios.get(
       `https://api.paystack.co/transaction/verify/${reference}`,
       {
@@ -73,12 +74,11 @@ router.post("/deposit/verify", authMiddleware, async (req, res) => {
 
     const data = response.data.data;
 
-    if (data.status === "success") {
-      const amount = data.amount / 100;
-
-      // ✅ Use Paystack metadata if available, else fallback to logged-in user
+    if (data && data.status === "success") {
+      const amount = data.amount / 100; // convert kobo to naira
       const userId = data.metadata?.userId || req.user.id;
 
+      // ✅ Update wallet balance (same as your test mode)
       const updated = await pool.query(
         `UPDATE wallets SET balance = balance + $1 WHERE user_id = $2 RETURNING balance`,
         [amount, userId]
@@ -86,11 +86,11 @@ router.post("/deposit/verify", authMiddleware, async (req, res) => {
 
       return res.json({
         success: true,
-        message: "Deposit verified",
+        message: "Deposit successful",
         balance: updated.rows[0].balance
       });
     } else {
-      res.json({ success: false, message: "Payment not successful" });
+      return res.json({ success: false, message: "Payment not successful" });
     }
   } catch (err) {
     console.error("❌ Verification error:", err.response?.data || err.message);
@@ -98,12 +98,12 @@ router.post("/deposit/verify", authMiddleware, async (req, res) => {
   }
 });
 
-// ✅ Paystack Webhook
+// ✅ Paystack Webhook (auto-credit wallet even if user doesn’t return)
 router.post("/webhook", express.json({ type: "application/json" }), async (req, res) => {
   try {
     const secret = process.env.PAYSTACK_SECRET_KEY;
 
-    // ✅ Verify webhook signature
+    // Verify webhook signature
     const hash = crypto
       .createHmac("sha512", secret)
       .update(JSON.stringify(req.body))
@@ -120,6 +120,7 @@ router.post("/webhook", express.json({ type: "application/json" }), async (req, 
       const amount = data.amount / 100;
       const userId = data.metadata.userId;
 
+      // ✅ Same direct balance update as test mode
       await pool.query(
         `UPDATE wallets SET balance = balance + $1 WHERE user_id = $2 RETURNING balance`,
         [amount, userId]
