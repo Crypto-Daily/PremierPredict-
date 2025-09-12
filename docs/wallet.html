@@ -43,7 +43,6 @@
     function logout() { localStorage.removeItem("token"); window.location.href = "index.html"; }
     document.getElementById("logoutBtn").addEventListener("click", logout);
 
-    // ✅ Format money with ₦
     function formatMoney(amount) {
       return "₦" + Number(amount).toLocaleString("en-NG", { minimumFractionDigits: 2 });
     }
@@ -56,7 +55,6 @@
         window.location.href = "index.html"; 
         return; 
       }
-
       try {
         const res = await fetch(`${API_URL}/wallet/balance`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -87,8 +85,7 @@
 
         const data = await res.json();
         if (data.authorizationUrl) {
-          // ✅ redirect to Paystack checkout
-          window.location.href = data.authorizationUrl;
+          window.location.href = data.authorizationUrl; // ✅ redirect to Paystack
         } else {
           alert("❌ Deposit initiation failed");
         }
@@ -150,7 +147,7 @@
             alert("❌ Payment verification failed");
           }
 
-          // ✅ clean the URL (remove ?reference=...)
+          // ✅ Clean the URL so reference= is gone
           window.history.replaceState({}, document.title, "wallet.html");
         } catch (err) {
           console.error(err);
@@ -159,13 +156,10 @@
       })();
     }
 
-    // Event listeners
     document.getElementById("depositBtn").addEventListener("click", depositFunds);
     document.getElementById("withdrawBtn").addEventListener("click", withdrawFunds);
 
-    // Initial load
     loadWallet();
   </script>
-
 </body>
 </html>
