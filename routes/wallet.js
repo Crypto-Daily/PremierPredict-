@@ -77,8 +77,7 @@ router.post("/deposit/initiate", authMiddleware, async (req, res) => {
 router.post("/deposit/verify", authMiddleware, async (req, res) => {
   try {
     const { reference } = req.body;
-    if (!reference)
-      return res.status(400).json({ error: "Missing reference" });
+    if (!reference) return res.status(400).json({ error: "Missing reference" });
 
     // Call Paystack verify API
     const response = await axios.get(
@@ -89,24 +88,42 @@ router.post("/deposit/verify", authMiddleware, async (req, res) => {
     );
 
     const data = response.data.data;
+    console.log("🔍 Paystack verify response:", data);
 
     if (data && data.status === "success") {
-      const amount = data.amount / 100; // convert kobo to naira
+      const amount = data.amount / 100;
       const userId = data.metadata?.userId || req.user.id;
 
-      // ✅ Update payments table
+      // ✅ Check if already marked as success
+      const existing = await pool.query(
+        `SELECT status FROM paystack_payments WHERE reference = $1`,
+        [reference]
+      );
+
+      if (existing.rows.length && existing.rows[0].status === "success") {
+        return res.json({ 
+          success: true, 
+          message: "Already verified", 
+          balance: (await pool.query(
+            `SELECT balance FROM wallets WHERE user_id = $1`, 
+            [userId]
+          )).rows[0].balance 
+        });
+      }
+
+      // ✅ Mark payment as success
       await pool.query(
-        `UPDATE paystack_payments
+        `UPDATE paystack_payments 
          SET status = 'success', updated_at = NOW()
          WHERE reference = $1`,
         [reference]
       );
 
-      // ✅ Credit wallet if not already credited
+      // ✅ Credit wallet
       const updated = await pool.query(
-        `UPDATE wallets
-         SET balance = balance + $1
-         WHERE user_id = $2
+        `UPDATE wallets 
+         SET balance = balance + $1 
+         WHERE user_id = $2 
          RETURNING balance`,
         [amount, userId]
       );
