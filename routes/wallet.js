@@ -55,8 +55,8 @@ router.post("/deposit/initiate", authMiddleware, async (req, res) => {
       "https://api.paystack.co/transaction/initialize",
       {
         email,
-        amount: amount * 100, // kobo
-        callback_url: "https://premierpredict.onrender.com/wallet.html",
+        amount: amount * 100, // convert to kobo
+        callback_url: `${process.env.APP_URL}/wallet/deposit/verify?reference={reference}`,
         metadata: { userId: req.user.id },
       },
       {
@@ -76,19 +76,23 @@ router.post("/deposit/initiate", authMiddleware, async (req, res) => {
       [req.user.id, reference, amount]
     );
 
+    // ✅ Redirect user to Paystack payment page
     res.json({ authorizationUrl: authorization_url, reference });
   } catch (err) {
-    console.error("❌ Deposit initiation error:", err.response?.data || err.message);
+    console.error(
+      "❌ Deposit initiation error:",
+      err.response?.data || err.message
+    );
     res.status(500).json({ error: "Failed to initialize deposit" });
   }
 });
 
 /**
- * ✅ Verify Paystack Payment
+ * ✅ Verify Paystack Payment (with redirect)
  */
-router.post("/deposit/verify", authMiddleware, async (req, res) => {
+router.get("/deposit/verify", authMiddleware, async (req, res) => {
   try {
-    const { reference } = req.body;
+    const { reference } = req.query;
 
     if (!reference) {
       return res.status(400).json({ error: "Missing reference" });
@@ -103,7 +107,7 @@ router.post("/deposit/verify", authMiddleware, async (req, res) => {
     );
 
     const data = verifyRes.data.data;
-    console.log("🔍 Paystack verify response:", data);
+    console.log("🔍 Paystack verify response:", JSON.stringify(data, null, 2));
 
     if (data?.status === "success") {
       const amount = data.amount / 100;
@@ -116,16 +120,7 @@ router.post("/deposit/verify", authMiddleware, async (req, res) => {
       );
 
       if (existing.rows.length && existing.rows[0].status === "success") {
-        const bal = await pool.query(
-          `SELECT balance FROM wallets WHERE user_id = $1`,
-          [userId]
-        );
-
-        return res.json({
-          success: true,
-          message: "Already verified",
-          balance: bal.rows[0].balance,
-        });
+        return res.redirect(`/wallet.html?status=already_verified`);
       }
 
       // Mark success
@@ -137,30 +132,30 @@ router.post("/deposit/verify", authMiddleware, async (req, res) => {
       );
 
       // Credit wallet
-      const updated = await pool.query(
+      await pool.query(
         `UPDATE wallets 
          SET balance = balance + $1 
-         WHERE user_id = $2 
-         RETURNING balance`,
+         WHERE user_id = $2`,
         [amount, userId]
       );
 
-      return res.json({
-        success: true,
-        message: "Deposit successful",
-        balance: updated.rows[0].balance,
-      });
+      // ✅ Redirect to wallet page with success status
+      return res.redirect(`/wallet.html?status=success&amount=${amount}`);
     }
 
-    res.json({ success: false, message: "Payment not successful" });
+    res.redirect(`/wallet.html?status=failed`);
   } catch (err) {
-    console.error("❌ Verification error FULL:", err.response?.data || err.message, err.stack);
-    res.status(500).json({ error: "Verification failed" });
+    console.error(
+      "❌ Verification error FULL:",
+      err.response?.data || err.message,
+      err.stack
+    );
+    res.redirect(`/wallet.html?status=error`);
   }
 });
 
 /**
- * ✅ Paystack Webhook
+ * ✅ Webhook (still needed for double safety)
  */
 router.post(
   "/webhook",
@@ -218,44 +213,5 @@ router.post(
     }
   }
 );
-
-/**
- * ✅ Withdraw funds
- */
-router.post("/withdraw", authMiddleware, async (req, res) => {
-  try {
-    const { amount } = req.body;
-
-    if (!amount || amount <= 0) {
-      return res.status(400).json({ error: "Invalid amount" });
-    }
-
-    const { rows } = await pool.query(
-      "SELECT balance FROM wallets WHERE user_id = $1",
-      [req.user.id]
-    );
-
-    if (rows.length === 0 || rows[0].balance < amount) {
-      return res.status(400).json({ error: "Insufficient balance" });
-    }
-
-    const updated = await pool.query(
-      `UPDATE wallets
-       SET balance = balance - $1
-       WHERE user_id = $2
-       RETURNING balance`,
-      [amount, req.user.id]
-    );
-
-    res.json({
-      success: true,
-      message: "Withdrawal successful",
-      balance: updated.rows[0].balance,
-    });
-  } catch (err) {
-    console.error("❌ Withdraw error:", err.message);
-    res.status(500).json({ error: "Withdrawal failed" });
-  }
-});
 
 export default router;
