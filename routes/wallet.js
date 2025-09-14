@@ -1,3 +1,4 @@
+// routes/wallet.js
 import express from "express";
 import pool from "../db.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
@@ -56,7 +57,8 @@ router.post("/deposit/initiate", authMiddleware, async (req, res) => {
       {
         email,
         amount: amount * 100, // convert to kobo
-        callback_url: `${process.env.APP_URL}/wallet/deposit/verify?reference={reference}`,
+        // ✅ Redirects back to backend verify route
+        callback_url: `${process.env.APP_URL}/api/wallet/deposit/verify`,
         metadata: { userId: req.user.id },
       },
       {
@@ -76,7 +78,6 @@ router.post("/deposit/initiate", authMiddleware, async (req, res) => {
       [req.user.id, reference, amount]
     );
 
-    // ✅ Redirect user to Paystack payment page
     res.json({ authorizationUrl: authorization_url, reference });
   } catch (err) {
     console.error(
@@ -88,14 +89,14 @@ router.post("/deposit/initiate", authMiddleware, async (req, res) => {
 });
 
 /**
- * ✅ Verify Paystack Payment (with redirect)
+ * ✅ Verify Paystack Payment (via redirect from Paystack)
  */
-router.get("/deposit/verify", authMiddleware, async (req, res) => {
+router.get("/deposit/verify", async (req, res) => {
   try {
     const { reference } = req.query;
 
     if (!reference) {
-      return res.status(400).json({ error: "Missing reference" });
+      return res.redirect("/wallet.html?status=missing_reference");
     }
 
     // Verify with Paystack
@@ -111,19 +112,23 @@ router.get("/deposit/verify", authMiddleware, async (req, res) => {
 
     if (data?.status === "success") {
       const amount = data.amount / 100;
-      const userId = data.metadata?.userId || req.user.id;
+      const userId = data.metadata?.userId;
 
-      // Check if already processed
+      if (!userId) {
+        console.error("❌ No userId in metadata");
+        return res.redirect("/wallet.html?status=failed");
+      }
+
+      // Prevent double credit
       const existing = await pool.query(
         `SELECT status FROM paystack_payments WHERE reference = $1`,
         [reference]
       );
-
       if (existing.rows.length && existing.rows[0].status === "success") {
-        return res.redirect(`/wallet.html?status=already_verified`);
+        return res.redirect("/wallet.html?status=already_verified");
       }
 
-      // Mark success
+      // Mark payment as success
       await pool.query(
         `UPDATE paystack_payments 
          SET status = 'success', updated_at = NOW()
@@ -139,23 +144,19 @@ router.get("/deposit/verify", authMiddleware, async (req, res) => {
         [amount, userId]
       );
 
-      // ✅ Redirect to wallet page with success status
+      console.log(`✅ Deposit verified: ₦${amount} credited to user ${userId}`);
       return res.redirect(`/wallet.html?status=success&amount=${amount}`);
     }
 
-    res.redirect(`/wallet.html?status=failed`);
+    res.redirect("/wallet.html?status=failed");
   } catch (err) {
-    console.error(
-      "❌ Verification error FULL:",
-      err.response?.data || err.message,
-      err.stack
-    );
-    res.redirect(`/wallet.html?status=error`);
+    console.error("❌ Verification error:", err.response?.data || err.message);
+    res.redirect("/wallet.html?status=error");
   }
 });
 
 /**
- * ✅ Webhook (still needed for double safety)
+ * ✅ Webhook (extra safety)
  */
 router.post(
   "/webhook",
