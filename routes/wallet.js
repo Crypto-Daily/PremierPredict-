@@ -13,7 +13,7 @@ const router = express.Router();
 router.get("/balance", authMiddleware, async (req, res) => {
   try {
     const { rows } = await pool.query(
-      "SELECT balance FROM wallets WHERE user_id = $1",
+      "SELECT balance_kobo FROM wallets WHERE user_id = $1",
       [req.user.id]
     );
 
@@ -21,7 +21,10 @@ router.get("/balance", authMiddleware, async (req, res) => {
       return res.status(404).json({ error: "Wallet not found" });
     }
 
-    res.json({ balance: rows[0].balance });
+    // Convert kobo → naira
+    const balance = rows[0].balance_kobo / 100;
+
+    res.json({ balance });
   } catch (err) {
     console.error("❌ Balance error:", err.message);
     res.status(500).json({ error: "Failed to fetch balance" });
@@ -57,7 +60,6 @@ router.post("/deposit/initiate", authMiddleware, async (req, res) => {
       {
         email,
         amount: amount * 100, // convert to kobo
-        // ✅ Redirects back to backend verify route
         callback_url: `${process.env.APP_URL}/api/wallet/deposit/verify`,
         metadata: { userId: req.user.id },
       },
@@ -111,7 +113,7 @@ router.get("/deposit/verify", async (req, res) => {
     console.log("🔍 Paystack verify response:", JSON.stringify(data, null, 2));
 
     if (data?.status === "success") {
-      const amount = data.amount / 100;
+      const amount = data.amount / 100; // amount in naira
       const userId = data.metadata?.userId;
 
       if (!userId) {
@@ -136,12 +138,12 @@ router.get("/deposit/verify", async (req, res) => {
         [reference]
       );
 
-      // Credit wallet
+      // Credit wallet (convert to kobo)
       await pool.query(
         `UPDATE wallets 
-         SET balance = balance + $1 
+         SET balance_kobo = balance_kobo + $1 
          WHERE user_id = $2`,
-        [amount, userId]
+        [amount * 100, userId]
       );
 
       console.log(`✅ Deposit verified: ₦${amount} credited to user ${userId}`);
@@ -180,7 +182,7 @@ router.post(
 
       if (event.event === "charge.success") {
         const data = event.data;
-        const amount = data.amount / 100;
+        const amount = data.amount / 100; // naira
         const userId = data.metadata?.userId;
 
         if (!userId) {
@@ -196,12 +198,12 @@ router.post(
           [data.reference]
         );
 
-        // Credit wallet
+        // Credit wallet (convert to kobo)
         await pool.query(
           `UPDATE wallets
-           SET balance = balance + $1
+           SET balance_kobo = balance_kobo + $1
            WHERE user_id = $2`,
-          [amount, userId]
+          [amount * 100, userId]
         );
 
         console.log(`✅ Webhook deposit: ₦${amount} credited to user ${userId}`);
