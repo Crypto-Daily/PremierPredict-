@@ -11,10 +11,11 @@
     .container { max-width: 600px; margin: auto; background: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
     input { width: 100%; padding: 0.5rem; margin: 0.5rem 0; }
     button { padding: 0.5rem 1rem; margin-top: 1rem; cursor: pointer; }
+    
   </style>
 </head>
 <body>
-
+<div id="jackpot-info"></div>
   <nav>
     <a href="dashboard.html">Dashboard</a>
     <a href="wallet.html">Wallet</a>
@@ -32,56 +33,86 @@
     <button id="placeBetBtn">Place Bet</button>
   </div>
 
-  <script>
-    const API_URL = "https://premierpredict.onrender.com/api";
+ <script>
+  const API_URL = "https://premierpredict.onrender.com/api";
 
-    function getToken() { return localStorage.getItem("token"); }
-    function logout() { localStorage.removeItem("token"); window.location.href = "index.html"; }
-    document.getElementById("logoutBtn").addEventListener("click", logout);
+  function getToken() { 
+    return localStorage.getItem("token"); 
+  }
 
-    async function loadJackpot() {
-      const token = getToken();
-      if (!token) { alert("⚠ Please login first."); window.location.href = "index.html"; return; }
+  function logout() { 
+    localStorage.removeItem("token"); 
+    window.location.href = "index.html"; 
+  }
 
-      try {
-        const res = await fetch(`${API_URL}/jackpot`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const data = await res.json();
-        document.getElementById("jackpotMessage").innerText = JSON.stringify(data);
-      } catch (err) {
-        alert("❌ Error fetching jackpot data");
-        console.error(err);
-      }
+  document.getElementById("logoutBtn").addEventListener("click", logout);
+
+  async function loadJackpot() {
+    const token = getToken();
+    if (!token) { 
+      alert("⚠ Please login first."); 
+      window.location.href = "index.html"; 
+      return; 
     }
 
-    async function placeBet() {
-      const token = getToken();
-      const amount = document.getElementById("betAmount").value;
-      const choice = document.getElementById("betChoice").value;
-      if (!amount || !choice) return alert("Enter amount and choice");
+    try {
+      const res = await fetch(`${API_URL}/jackpot`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
 
-      try {
-        const res = await fetch(`${API_URL}/jackpot/bet`, {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({ amount, choice }),
-        });
-        const data = await res.json();
-        alert(data.message || "✅ Bet placed!");
-        loadJackpot();
-      } catch (err) {
-        alert("❌ Error placing bet");
-        console.error(err);
+      const jackpotDiv = document.getElementById("jackpotMessage");
+
+      if (data.message) {
+        jackpotDiv.innerText = data.message;
+      } else {
+        jackpotDiv.innerHTML = `
+          <p><b>Round:</b> ${data.name}</p>
+          <p><b>Prize Pool:</b> ₦${(data.prize_pool_kobo / 100).toLocaleString()}</p>
+          <p><b>Status:</b> ${data.status}</p>
+        `;
       }
+    } catch (err) {
+      alert("❌ Error fetching jackpot data");
+      console.error(err);
+      document.getElementById("jackpotMessage").innerText = "⚠ Error loading jackpot.";
+    }
+  }
+
+  async function placeBet() {
+    const token = getToken();
+    const amount = document.getElementById("betAmount").value;
+    const choice = document.getElementById("betChoice").value;
+
+    if (!amount || !choice) {
+      return alert("Enter amount and choice");
     }
 
-    document.getElementById("placeBetBtn").addEventListener("click", placeBet);
-    loadJackpot();
-  </script>
+    try {
+      const res = await fetch(`${API_URL}/jackpot/bet`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ amount, choice }),
+      });
+
+      const data = await res.json();
+      alert(data.message || "✅ Bet placed!");
+      loadJackpot(); // refresh jackpot info
+    } catch (err) {
+      alert("❌ Error placing bet");
+      console.error(err);
+    }
+  }
+
+  document.getElementById("placeBetBtn").addEventListener("click", placeBet);
+
+  // load jackpot immediately and refresh every 15s
+  loadJackpot();
+  setInterval(loadJackpot, 15000);
+ </script>
 
 </body>
 </html>
