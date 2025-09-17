@@ -29,7 +29,19 @@
 
     <h3>Place a Bet</h3>
     <input type="number" id="betAmount" placeholder="Enter amount to bet">
-    <input type="text" id="betChoice" placeholder="Enter your choice">
+    <div>
+  <input type="number" id="betAmount" placeholder="Enter amount to bet" />
+  
+  <label for="betChoice"><b>Select Outcome</b></label>
+  <select id="betChoice">
+    <option value="">-- Choose --</option>
+    <option value="home_win">Home Win</option>
+    <option value="draw">Draw</option>
+    <option value="away_win">Away Win</option>
+  </select>
+
+  <button id="placeBetBtn">Place Bet</button>
+    </div>
     <button id="placeBetBtn">Place Bet</button>
   </div>
 
