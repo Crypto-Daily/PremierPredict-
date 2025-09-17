@@ -13,7 +13,6 @@ import dashboardRoutes from "./routes/dashboard.js";
 dotenv.config();
 
 const app = express();
-const jackpotRoutes = require("./routes/jackpot");
 // ✅ Middleware
 app.use(express.json());
 
