@@ -4,14 +4,32 @@ import { authMiddleware } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// ✅ GET current jackpot round
+// ✅ GET current jackpot round with matches
 router.get("/", authMiddleware, async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT id, name, prize_pool_kobo, status, created_at
-       FROM jackpot_rounds
-       WHERE status = 'active'
-       ORDER BY created_at DESC
+      `SELECT jr.id,
+              jr.name,
+              jr.prize_pool_kobo,
+              jr.status,
+              jr.created_at,
+              COALESCE(
+                json_agg(
+                  json_build_object(
+                    'match_id', jm.id,
+                    'home_team', jm.home_team,
+                    'away_team', jm.away_team,
+                    'match_time', jm.match_time
+                  )
+                  ORDER BY jm.match_time
+                ) FILTER (WHERE jm.id IS NOT NULL),
+                '[]'
+              ) AS matches
+       FROM jackpot_rounds jr
+       LEFT JOIN jackpot_matches jm ON jm.round_id = jr.id
+       WHERE jr.status = 'active'
+       GROUP BY jr.id
+       ORDER BY jr.created_at DESC
        LIMIT 1`
     );
 
