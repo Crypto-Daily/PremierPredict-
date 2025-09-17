@@ -3,103 +3,105 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard - PremierPredict</title>
+  <title>PremierPredict Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
   <style>
-    :root {
-      --primary: #007bff;
-      --bg: #f5f5f5;
-      --white: #fff;
-      --radius: 8px;
+    .gradient-bg {
+      background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #1d4ed8 100%);
     }
-
-    body {
-      font-family: Arial, sans-serif;
-      padding: 2rem;
-      background: var(--bg);
-      margin: 0;
+    .fixture-card {
+      transition: all 0.3s ease;
     }
-
-    nav {
-      margin-bottom: 1.5rem;
-    }
-
-    nav a {
-      margin-right: 1rem;
-      text-decoration: none;
-      color: var(--primary);
-      font-weight: 500;
-    }
-
-    .container {
-      max-width: 700px;
-      margin: auto;
-      background: var(--white);
-      padding: 2rem;
-      border-radius: var(--radius);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-
-    h2 {
-      text-align: center;
-      margin-bottom: 1rem;
-    }
-
-    .card {
-      padding: 1.2rem;
-      margin: 1rem 0;
-      border: 1px solid #ddd;
-      border-radius: var(--radius);
-      background: #fafafa;
-    }
-
-    .card h3 {
-      margin: 0 0 0.5rem 0;
-    }
-
-    button {
-      margin-top: 0.5rem;
-      padding: 0.6rem 1rem;
-      background: var(--primary);
-      color: #fff;
-      border: none;
-      border-radius: var(--radius);
-      cursor: pointer;
-    }
-
-    button:hover {
-      background: #0056b3;
+    .fixture-card:hover {
+      background-color: #f8fafc;
     }
   </style>
 </head>
-<body>
+<body class="bg-gray-50">
 
-  <nav>
-    <a href="dashboard.html">Dashboard</a>
-    <a href="wallet.html">Wallet</a>
-    <a href="jackpot.html">Jackpot</a>
-    <a href="#" id="logoutBtn">Logout</a>
+  <!-- Navigation -->
+  <nav class="gradient-bg text-white shadow-lg">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center space-x-2">
+        <i data-feather="award" class="w-8 h-8"></i>
+        <span class="text-xl font-bold">PremierPredict</span>
+      </div>
+      <div class="flex items-center space-x-6">
+        <a href="dashboard.html" class="hover:text-blue-200 transition">Dashboard</a>
+        <a href="wallet.html" class="hover:text-blue-200 transition">Wallet</a>
+        <a href="jackpot.html" class="hover:text-blue-200 transition">Jackpot</a>
+        <a href="#" id="logoutBtn" class="hover:text-blue-200 transition">Logout</a>
+      </div>
+    </div>
   </nav>
 
-  <div class="container">
-    <h2>Welcome, <span id="username">User</span> 👋</h2>
+  <!-- Main Content -->
+  <div class="container mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <!-- Sidebar -->
+    <div class="lg:col-span-1 space-y-6">
+      <!-- Profile Card -->
+      <div class="bg-white rounded-xl shadow-md overflow-hidden p-6 text-center" data-aos="fade-right">
+        <img src="http://static.photos/people/120x120/1" alt="User" class="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-blue-500">
+        <h3 id="username" class="text-xl font-bold">Loading...</h3>
+        <p class="text-gray-500 mb-2">Member</p>
+        <p class="text-lg font-bold text-blue-600">Balance: <span id="balance">₦0.00</span></p>
+      </div>
 
-    <div class="card">
-      <h3>Account Info</h3>
-      <p><strong>Email:</strong> <span id="email">loading...</span></p>
-      <p><strong>Wallet Balance:</strong> <span id="balance">₦0.00</span></p>
+      <!-- Quick Stats -->
+      <div class="bg-white rounded-xl shadow-md overflow-hidden p-6" data-aos="fade-right" data-aos-delay="100">
+        <h3 class="font-bold text-lg mb-4 flex items-center">
+          <i data-feather="bar-chart-2" class="mr-2 w-5 h-5"></i> Quick Stats
+        </h3>
+        <div class="space-y-3 text-sm">
+          <div class="flex justify-between"><span>Total Bets</span><span id="totalBets">0</span></div>
+          <div class="flex justify-between"><span>Wins</span><span id="wins" class="text-green-500">0</span></div>
+          <div class="flex justify-between"><span>Losses</span><span id="losses" class="text-red-500">0</span></div>
+          <div class="flex justify-between"><span>Win Rate</span><span id="winRate">0%</span></div>
+        </div>
+      </div>
     </div>
 
-    <div class="card">
-      <h3>Quick Actions</h3>
-      <button onclick="window.location.href='wallet.html'">Go to Wallet</button>
-      <button onclick="window.location.href='jackpot.html'">Play Jackpot</button>
+    <!-- Dashboard Main -->
+    <div class="lg:col-span-3 space-y-6">
+      <!-- Welcome Banner -->
+      <div class="gradient-bg text-white rounded-xl shadow-md overflow-hidden p-6" data-aos="fade-up">
+        <h2 class="text-2xl font-bold mb-2">Welcome back, <span id="welcomeUser">User</span>!</h2>
+        <p class="opacity-90">Check out your latest stats and fixtures.</p>
+      </div>
+
+      <!-- Fixtures (static for now, API can be plugged in later) -->
+      <div class="bg-white rounded-xl shadow-md overflow-hidden" data-aos="fade-up" data-aos-delay="100">
+        <div class="p-6 border-b border-gray-200">
+          <h3 class="font-bold text-lg flex items-center">
+            <i data-feather="calendar" class="mr-2 w-5 h-5"></i> Today’s Fixtures
+          </h3>
+        </div>
+        <div id="fixtures" class="divide-y divide-gray-200">
+          <p class="p-4 text-gray-500">Loading fixtures...</p>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="bg-white rounded-xl shadow-md overflow-hidden" data-aos="fade-up" data-aos-delay="200">
+        <div class="p-6 border-b border-gray-200">
+          <h3 class="font-bold text-lg flex items-center">
+            <i data-feather="activity" class="mr-2 w-5 h-5"></i> Recent Activity
+          </h3>
+        </div>
+        <div id="activity" class="divide-y divide-gray-200">
+          <p class="p-4 text-gray-500">Loading activity...</p>
+        </div>
+      </div>
     </div>
   </div>
 
   <script>
     const API_URL = "https://premierpredict.onrender.com/api";
-
     const getToken = () => localStorage.getItem("token");
+
     const logout = () => {
       localStorage.removeItem("token");
       window.location.href = "index.html";
@@ -109,7 +111,7 @@
     const formatMoney = (amount) =>
       "₦" + Number(amount).toLocaleString("en-NG", { minimumFractionDigits: 2 });
 
-    // ✅ Load dashboard
+    // Load Dashboard
     async function loadDashboard() {
       const token = getToken();
       if (!token) {
@@ -117,27 +119,51 @@
         window.location.href = "index.html";
         return;
       }
-
-      // Pull username/email from localStorage if saved
-      const savedUser = JSON.parse(localStorage.getItem("user")) || {};
-      if (savedUser.username) document.getElementById("username").innerText = savedUser.username;
-      if (savedUser.email) document.getElementById("email").innerText = savedUser.email;
-
       try {
-        // ✅ Same balance endpoint from wallet.html
-        const res = await fetch(`${API_URL}/wallet/balance`, {
-          headers: { Authorization: `Bearer ${token}` },
+        // Fetch profile + wallet
+        const res = await fetch(`${API_URL}/user/me`, {
+          headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
+
+        document.getElementById("username").innerText = data.username || "User";
+        document.getElementById("welcomeUser").innerText = data.username || "User";
         document.getElementById("balance").innerText = formatMoney(data.balance || 0);
+
+        // Quick stats
+        document.getElementById("totalBets").innerText = data.totalBets || 0;
+        document.getElementById("wins").innerText = data.wins || 0;
+        document.getElementById("losses").innerText = data.losses || 0;
+        document.getElementById("winRate").innerText =
+          data.totalBets > 0 ? ((data.wins / data.totalBets) * 100).toFixed(1) + "%" : "0%";
+
+        // Fixtures
+        document.getElementById("fixtures").innerHTML = (data.fixtures || [])
+          .map(f => `
+            <div class="p-4 flex justify-between fixture-card">
+              <span>${f.home}</span>
+              <span class="text-gray-500">${f.time}</span>
+              <span>${f.away}</span>
+            </div>
+          `).join("") || "<p class='p-4 text-gray-500'>No fixtures today.</p>";
+
+        // Recent Activity
+        document.getElementById("activity").innerHTML = (data.activity || [])
+          .map(a => `
+            <div class="p-4 text-sm">
+              <p><strong>${a.type}</strong>: ${a.message}</p>
+              <p class="text-gray-500">${a.time}</p>
+            </div>
+          `).join("") || "<p class='p-4 text-gray-500'>No recent activity.</p>";
       } catch (err) {
         console.error(err);
         alert("❌ Error fetching dashboard data");
       }
     }
 
+    AOS.init({ duration: 800, easing: "ease-in-out", once: true });
+    feather.replace();
     loadDashboard();
   </script>
-
 </body>
   </html>
