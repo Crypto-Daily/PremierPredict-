@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>PremierPredict Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet"/>
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
   <style>
@@ -43,7 +43,7 @@
     <!-- Sidebar -->
     <div class="lg:col-span-1 space-y-6">
       <!-- Profile Card -->
-      <div class="bg-white rounded-xl shadow-md overflow-hidden p-6 text-center" data-aos="fade-right">
+      <div class="bg-white rounded-xl shadow-md p-6 text-center" data-aos="fade-right">
         <img src="http://static.photos/people/120x120/1" alt="User" class="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-blue-500">
         <h3 id="username" class="text-xl font-bold">Loading...</h3>
         <p class="text-gray-500 mb-2">Member</p>
@@ -51,7 +51,7 @@
       </div>
 
       <!-- Quick Stats -->
-      <div class="bg-white rounded-xl shadow-md overflow-hidden p-6" data-aos="fade-right" data-aos-delay="100">
+      <div class="bg-white rounded-xl shadow-md p-6" data-aos="fade-right" data-aos-delay="100">
         <h3 class="font-bold text-lg mb-4 flex items-center">
           <i data-feather="bar-chart-2" class="mr-2 w-5 h-5"></i> Quick Stats
         </h3>
@@ -67,13 +67,13 @@
     <!-- Dashboard Main -->
     <div class="lg:col-span-3 space-y-6">
       <!-- Welcome Banner -->
-      <div class="gradient-bg text-white rounded-xl shadow-md overflow-hidden p-6" data-aos="fade-up">
+      <div class="gradient-bg text-white rounded-xl shadow-md p-6" data-aos="fade-up">
         <h2 class="text-2xl font-bold mb-2">Welcome back, <span id="welcomeUser">User</span>!</h2>
         <p class="opacity-90">Check out your latest stats and fixtures.</p>
       </div>
 
-      <!-- Fixtures (static for now, API can be plugged in later) -->
-      <div class="bg-white rounded-xl shadow-md overflow-hidden" data-aos="fade-up" data-aos-delay="100">
+      <!-- Fixtures -->
+      <div class="bg-white rounded-xl shadow-md" data-aos="fade-up" data-aos-delay="100">
         <div class="p-6 border-b border-gray-200">
           <h3 class="font-bold text-lg flex items-center">
             <i data-feather="calendar" class="mr-2 w-5 h-5"></i> Today’s Fixtures
@@ -85,7 +85,7 @@
       </div>
 
       <!-- Recent Activity -->
-      <div class="bg-white rounded-xl shadow-md overflow-hidden" data-aos="fade-up" data-aos-delay="200">
+      <div class="bg-white rounded-xl shadow-md" data-aos="fade-up" data-aos-delay="200">
         <div class="p-6 border-b border-gray-200">
           <h3 class="font-bold text-lg flex items-center">
             <i data-feather="activity" class="mr-2 w-5 h-5"></i> Recent Activity
@@ -120,14 +120,17 @@
         return;
       }
       try {
-        // Fetch profile + wallet
-        const res = await fetch(`${API_URL}/user/me`, {
+        const res = await fetch(`${API_URL}/dashboard`, {
           headers: { Authorization: `Bearer ${token}` }
         });
+
+        if (!res.ok) throw new Error("Bad response from server");
+
         const data = await res.json();
 
-        document.getElementById("username").innerText = data.username || "User";
-        document.getElementById("welcomeUser").innerText = data.username || "User";
+        // Profile
+        document.getElementById("username").innerText = data.user?.username || "User";
+        document.getElementById("welcomeUser").innerText = data.user?.username || "User";
         document.getElementById("balance").innerText = formatMoney(data.balance || 0);
 
         // Quick stats
@@ -156,7 +159,7 @@
             </div>
           `).join("") || "<p class='p-4 text-gray-500'>No recent activity.</p>";
       } catch (err) {
-        console.error(err);
+        console.error("❌ Dashboard fetch error:", err);
         alert("❌ Error fetching dashboard data");
       }
     }
@@ -166,4 +169,4 @@
     loadDashboard();
   </script>
 </body>
-  </html>
+                                                                                                              </html>
