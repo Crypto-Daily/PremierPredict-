@@ -1,11 +1,11 @@
-// routes/jackpot.js
-const express = require("express");
-const router = express.Router();
-const pool = require("db.js"); // adjust path to your db.js/pg pool
-const auth = require("middleware/authMiddleware"); // JWT middleware
+import express from "express";
+import pool from "../db.js";   // adjust path if needed
+import { authMiddleware } from "../middleware/authMiddleware.js";
 
-// GET current jackpot round
-router.get("/", auth, async (req, res) => {
+const router = express.Router();
+
+// ✅ GET current jackpot round
+router.get("/", authMiddleware, async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT id, name, prize_pool_kobo, status, created_at
@@ -26,8 +26,8 @@ router.get("/", auth, async (req, res) => {
   }
 });
 
-// POST place a bet
-router.post("/bet", auth, async (req, res) => {
+// ✅ POST place a bet
+router.post("/bet", authMiddleware, async (req, res) => {
   const client = await pool.connect();
   try {
     const { amount, choice } = req.body;
@@ -39,7 +39,7 @@ router.post("/bet", auth, async (req, res) => {
 
     await client.query("BEGIN");
 
-    // Get active round
+    // 1. Get active round
     const roundRes = await client.query(
       `SELECT id FROM jackpot_rounds WHERE status = 'active' ORDER BY created_at DESC LIMIT 1`
     );
@@ -49,7 +49,7 @@ router.post("/bet", auth, async (req, res) => {
     }
     const roundId = roundRes.rows[0].id;
 
-    // Check wallet balance
+    // 2. Check wallet balance
     const walletRes = await client.query(
       "SELECT balance_kobo FROM wallets WHERE user_id = $1 FOR UPDATE",
       [userId]
@@ -64,25 +64,26 @@ router.post("/bet", auth, async (req, res) => {
       return res.status(400).json({ error: "Insufficient balance." });
     }
 
-    // Deduct wallet
+    // 3. Deduct wallet
     await client.query(
       `UPDATE wallets SET balance_kobo = balance_kobo - $1, updated_at = NOW()
        WHERE user_id = $2`,
       [amount, userId]
     );
 
-    // Insert wallet txn
+    // 4. Insert wallet transaction
+    const reference = `jackpot_${Date.now()}`;
     await client.query(
       `INSERT INTO wallet_txns (user_id, type, amount_kobo, reference, status, created_at)
        VALUES ($1, 'jackpot_bet', $2, $3, 'success', NOW())`,
-      [userId, amount, `jackpot_${Date.now()}`]
+      [userId, amount, reference]
     );
 
-    // Insert jackpot bet
+    // 5. Insert jackpot bet
     await client.query(
       `INSERT INTO jackpot_bets (user_id, round_id, amount_kobo, choice, reference)
        VALUES ($1, $2, $3, $4, $5)`,
-      [userId, roundId, amount, choice, `jackpot_${Date.now()}`]
+      [userId, roundId, amount, choice, reference]
     );
 
     await client.query("COMMIT");
@@ -96,4 +97,5 @@ router.post("/bet", auth, async (req, res) => {
   }
 });
 
-module.exports = router;
+// ✅ ESM export
+export default router;
