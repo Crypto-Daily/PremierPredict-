@@ -9,9 +9,11 @@
     nav { margin-bottom: 1rem; }
     nav a { margin-right: 1rem; text-decoration: none; color: #007bff; }
     .container { max-width: 600px; margin: auto; background: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    input { width: 100%; padding: 0.5rem; margin: 0.5rem 0; }
+    input, select { width: 100%; padding: 0.5rem; margin: 0.5rem 0; }
     button { padding: 0.5rem 1rem; margin-top: 1rem; cursor: pointer; }
-    
+    .match { border-bottom: 1px solid #ddd; padding: 1rem 0; }
+    .match:last-child { border-bottom: none; }
+    .options label { margin-right: 1rem; }
   </style>
 </head>
 <body>
@@ -27,20 +29,12 @@
     <h2>Jackpot</h2>
     <p id="jackpotMessage">Loading available rounds...</p>
 
-    <div>
-  <input type="number" id="betAmount" placeholder="Enter amount to bet" />
-  
-  <label for="betChoice"><b>Select Outcome</b></label>
-  <select id="betChoice">
-    <option value="">-- Choose --</option>
-    <option value="home_win">Home Win</option>
-    <option value="draw">Draw</option>
-    <option value="away_win">Away Win</option>
-  </select>
+    <div id="matchesContainer"></div>
 
-  <button id="placeBetBtn">Place Bet</button>
-    </div>
-      </div>
+    <input type="number" id="betAmount" placeholder="Enter amount to bet" />
+
+    <button id="placeBetBtn">Place Bet</button>
+  </div>
 
  <script>
   const API_URL = "https://premierpredict.onrender.com/api";
@@ -71,15 +65,30 @@
       const data = await res.json();
 
       const jackpotDiv = document.getElementById("jackpotMessage");
+      const matchesContainer = document.getElementById("matchesContainer");
 
       if (data.message) {
         jackpotDiv.innerText = data.message;
+        matchesContainer.innerHTML = "";
       } else {
         jackpotDiv.innerHTML = `
           <p><b>Round:</b> ${data.name}</p>
           <p><b>Prize Pool:</b> ₦${(data.prize_pool_kobo / 100).toLocaleString()}</p>
           <p><b>Status:</b> ${data.status}</p>
         `;
+
+        // render matches with radio options
+        matchesContainer.innerHTML = data.matches.map(match => `
+          <div class="match">
+            <p><b>${match.home_team}</b> vs <b>${match.away_team}</b> <br>
+            <small>${new Date(match.match_time).toLocaleString()}</small></p>
+            <div class="options">
+              <label><input type="radio" name="match_${match.match_id}" value="home_win"> Home Win</label>
+              <label><input type="radio" name="match_${match.match_id}" value="draw"> Draw</label>
+              <label><input type="radio" name="match_${match.match_id}" value="away_win"> Away Win</label>
+            </div>
+          </div>
+        `).join("");
       }
     } catch (err) {
       alert("❌ Error fetching jackpot data");
@@ -91,10 +100,26 @@
   async function placeBet() {
     const token = getToken();
     const amount = document.getElementById("betAmount").value;
-    const choice = document.getElementById("betChoice").value;
 
-    if (!amount || !choice) {
-      return alert("Enter amount and choice");
+    if (!amount) {
+      return alert("Enter amount to bet");
+    }
+
+    // collect all match selections
+    const selections = [];
+    document.querySelectorAll("#matchesContainer .match").forEach(matchDiv => {
+      const radios = matchDiv.querySelectorAll("input[type=radio]");
+      let chosen = null;
+      radios.forEach(r => { if (r.checked) chosen = r.value; });
+
+      if (chosen) {
+        const matchId = radios[0].name.split("_")[1]; // extract ID from "match_1"
+        selections.push({ match_id: matchId, choice: chosen });
+      }
+    });
+
+    if (selections.length === 0) {
+      return alert("⚠ Please make at least one selection.");
     }
 
     try {
@@ -104,7 +129,7 @@
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ amount, choice }),
+        body: JSON.stringify({ amount, selections }),
       });
 
       const data = await res.json();
