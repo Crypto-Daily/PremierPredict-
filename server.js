@@ -3,6 +3,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 
+
 import authRoutes from "./routes/auth.js";
 import walletRoutes from "./routes/wallet.js";
 import jackpotRoutes from "./routes/jackpot.js";
@@ -12,7 +13,7 @@ import dashboardRoutes from "./routes/dashboard.js";
 dotenv.config();
 
 const app = express();
-
+const jackpotRoutes = require("./routes/jackpot");
 // ✅ Middleware
 app.use(express.json());
 
