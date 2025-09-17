@@ -7,6 +7,7 @@ import authRoutes from "./routes/auth.js";
 import walletRoutes from "./routes/wallet.js";
 import jackpotRoutes from "./routes/jackpot.js";
 import { authMiddleware } from "./middleware/authMiddleware.js";
+import dashboardRoutes from "./routes/dashboard.js";
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.use(
 app.use(express.static("docs"));
 
 // ✅ Routes
+app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/jackpot", jackpotRoutes);
