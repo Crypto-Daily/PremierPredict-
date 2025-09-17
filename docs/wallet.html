@@ -1,120 +1,99 @@
-<!DOCTYPE html>  
-<html lang="en">  
-<head>  
-  <meta charset="UTF-8">  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
-  <title>Wallet - PremierPredict</title>  
-  <style>  
-    :root {  
-      --primary: #007bff;  
-      --bg: #f5f5f5;  
-      --white: #fff;  
-      --radius: 8px;  
-    }  
-  
-    body {  
-      font-family: Arial, sans-serif;  
-      padding: 2rem;  
-      background: var(--bg);  
-      margin: 0;  
-    }  
-  
-    nav {  
-      margin-bottom: 1.5rem;  
-    }  
-  
-    nav a {  
-      margin-right: 1rem;  
-      text-decoration: none;  
-      color: var(--primary);  
-      font-weight: 500;  
-    }  
-  
-    .container {  
-      max-width: 500px;  
-      margin: auto;  
-      background: var(--white);  
-      padding: 2rem;  
-      border-radius: var(--radius);  
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);  
-    }  
-  
-    h2 {  
-      text-align: center;  
-      margin-bottom: 1rem;  
-    }  
-  
-    h3 {  
-      margin-top: 1.5rem;  
-    }  
-  
-    input {  
-      width: 100%;  
-      padding: 0.6rem;  
-      margin: 0.5rem 0;  
-      border: 1px solid #ccc;  
-      border-radius: var(--radius);  
-      font-size: 1rem;  
-    }  
-  
-    button {  
-      display: block;  
-      width: 100%;  
-      padding: 0.7rem;  
-      margin-top: 0.5rem;  
-      background: var(--primary);  
-      color: #fff;  
-      border: none;  
-      border-radius: var(--radius);  
-      cursor: pointer;  
-      font-size: 1rem;  
-      transition: background 0.3s ease;  
-    }  
-  
-    button:hover {  
-      background: #0056b3;  
-    }  
-  
-    p {  
-      font-size: 1.1rem;  
-    }  
-  </style>  
-</head>  
-<body>  
-  
-  <nav>  
-    <a href="dashboard.html">Dashboard</a>  
-    <a href="wallet.html">Wallet</a>  
-    <a href="jackpot.html">Jackpot</a>  
-    <a href="#" id="logoutBtn">Logout</a>  
-  </nav>  
-  
-  <div class="container">  
-    <h2>My Wallet</h2>  
-    <p><strong>Balance:</strong> <span id="balance">₦0.00</span></p>  
-  
-    <h3>Deposit Funds</h3>  
-    <input type="number" id="depositAmount" placeholder="Enter amount (₦)" min="100">  
-    <button id="depositBtn">Deposit with Paystack</button>  
-  
-    <h3>Withdraw Funds</h3>  
-    <input type="number" id="withdrawAmount" placeholder="Enter amount (₦)" min="100">  
-    <button id="withdrawBtn">Withdraw</button>  
-  </div>  
-  
-  <script>  
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wallet | Jackpot</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script src="https://unpkg.com/feather-icons"></script>
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+  <style>
+    .wallet-card {
+      background: rgba(249, 250, 251, 0.9);
+      border: 1px solid rgba(209, 213, 219, 0.5);
+    }
+    .input-field {
+      background: rgba(249, 250, 251, 0.9);
+      border: 1px solid rgba(209, 213, 219, 0.7);
+    }
+    .input-field:focus {
+      outline: none;
+      border-color: rgba(99, 102, 241, 0.8);
+    }
+  </style>
+</head>
+<body class="bg-white min-h-screen text-gray-800">
+  <div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <header class="flex justify-between items-center mb-8">
+      <div class="flex items-center space-x-2">
+        <i data-feather="dollar-sign" class="w-6 h-6"></i>
+        <h1 class="text-2xl font-bold">Jackpot Wallet</h1>
+      </div>
+      <nav class="space-x-4">
+        <a href="dashboard.html" class="hover:text-indigo-600 transition">Dashboard</a>
+        <a href="wallet.html" class="hover:text-indigo-600 transition">Wallet</a>
+        <a href="jackpot.html" class="hover:text-indigo-600 transition">Jackpot</a>
+        <a href="#" id="logoutBtn" class="hover:text-red-500 transition">Logout</a>
+      </nav>
+    </header>
+
+    <!-- Balance Card -->
+    <div class="wallet-card rounded-xl p-6 mb-8 shadow-lg" data-aos="fade-up">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold">Your Balance</h2>
+        <i data-feather="eye" class="w-5 h-5 cursor-pointer hover:text-indigo-600"></i>
+      </div>
+      <div class="text-4xl font-bold mb-2" id="balance">₦0.00</div>
+    </div>
+
+    <!-- Deposit Section -->
+    <div class="wallet-card rounded-xl p-6 mb-6" data-aos="fade-up">
+      <h3 class="text-lg font-semibold mb-4">Deposit Funds</h3>
+      <div class="mb-4">
+        <label class="block text-sm font-medium mb-2">Custom Amount</label>
+        <div class="relative">
+          <span class="absolute left-3 top-1/2 transform -translate-y-1/2">₦</span>
+          <input type="number" id="depositAmount" class="input-field w-full pl-8 py-3 rounded-lg" placeholder="Enter amount (₦)" min="100">
+        </div>
+      </div>
+      <button id="depositBtn" class="w-full bg-green-500 hover:bg-green-600 py-3 rounded-lg font-medium transition">Deposit with Paystack</button>
+    </div>
+
+    <!-- Withdraw Section -->
+    <div class="wallet-card rounded-xl p-6" data-aos="fade-up">
+      <h3 class="text-lg font-semibold mb-4">Withdraw Funds</h3>
+      <div class="mb-4">
+        <label class="block text-sm font-medium mb-2">Amount</label>
+        <div class="relative">
+          <span class="absolute left-3 top-1/2 transform -translate-y-1/2">₦</span>
+          <input type="number" id="withdrawAmount" class="input-field w-full pl-8 py-3 rounded-lg" placeholder="Enter amount (₦)" min="100">
+        </div>
+      </div>
+      <button id="withdrawBtn" class="w-full bg-blue-500 hover:bg-blue-600 py-3 rounded-lg font-medium transition">Withdraw</button>
+    </div>
+  </div>
+
+  <script>
+    AOS.init();
+    feather.replace();
+  </script>
+
+  <script>
     const API_URL = "https://premierpredict.onrender.com/api";  
-  
+
     const getToken = () => localStorage.getItem("token");  
     const logout = () => {  
       localStorage.removeItem("token");  
       window.location.href = "index.html";  
     };  
     document.getElementById("logoutBtn").addEventListener("click", logout);  
-  
+
     const formatMoney = (amount) =>  
       "₦" + Number(amount).toLocaleString("en-NG", { minimumFractionDigits: 2 });  
-  
+
     // ✅ Load wallet balance  
     async function loadWallet() {  
       const token = getToken();  
@@ -134,13 +113,13 @@
         alert("❌ Error fetching wallet data");  
       }  
     }  
-  
+
     // ✅ Deposit with Paystack  
     async function depositFunds() {  
       const token = getToken();  
       const amount = parseFloat(document.getElementById("depositAmount").value);  
       if (!amount || amount <= 0) return alert("Enter a valid amount");  
-  
+
       try {  
         const res = await fetch(`${API_URL}/wallet/deposit/initiate`, {  
           method: "POST",  
@@ -150,7 +129,7 @@
           },  
           body: JSON.stringify({ amount }),  
         });  
-  
+
         const data = await res.json();  
         if (data.authorizationUrl) {  
           window.location.href = data.authorizationUrl; // redirect to Paystack  
@@ -162,13 +141,13 @@
         alert("❌ Error connecting to server");  
       }  
     }  
-  
+
     // ✅ Withdraw funds  
     async function withdrawFunds() {  
       const token = getToken();  
       const amount = parseFloat(document.getElementById("withdrawAmount").value);  
       if (!amount || amount <= 0) return alert("Enter a valid amount");  
-  
+
       try {  
         const res = await fetch(`${API_URL}/wallet/withdraw`, {  
           method: "POST",  
@@ -178,7 +157,7 @@
           },  
           body: JSON.stringify({ amount }),  
         });  
-  
+
         const data = await res.json();  
         if (data.balance !== undefined) {  
           alert("✅ Withdrawal successful!");  
@@ -191,7 +170,7 @@
         alert("❌ Error connecting to server");  
       }  
     }  
-  
+
     // ✅ Handle Paystack redirect (verify deposit)  
     const urlParams = new URLSearchParams(window.location.search);  
     const reference = urlParams.get("reference");  
@@ -212,7 +191,7 @@
           } else {  
             alert("❌ Payment verification failed: " + (data.message || "Unknown error"));  
           }  
-  
+
           // Clean the URL so reference= is removed  
           window.history.replaceState({}, document.title, "wallet.html");  
         } catch (err) {  
@@ -221,11 +200,11 @@
         }  
       })();  
     }  
-  
+
     document.getElementById("depositBtn").addEventListener("click", depositFunds);  
     document.getElementById("withdrawBtn").addEventListener("click", withdrawFunds);  
-  
+
     loadWallet();  
-  </script>  
-</body>  
-</html>
+  </script>
+</body>
+  </html>
