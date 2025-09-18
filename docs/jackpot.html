@@ -5,19 +5,76 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Jackpot - PremierPredict</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 2rem; background: #f5f5f5; }
-    nav { margin-bottom: 1rem; }
-    nav a { margin-right: 1rem; text-decoration: none; color: #007bff; }
-    .container { max-width: 600px; margin: auto; background: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    input, select { width: 100%; padding: 0.5rem; margin: 0.5rem 0; }
-    button { padding: 0.5rem 1rem; margin-top: 1rem; cursor: pointer; }
-    .match { border-bottom: 1px solid #ddd; padding: 1rem 0; }
-    .match:last-child { border-bottom: none; }
-    .options label { margin-right: 1rem; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      background: #f5f5f5;
+    }
+    nav {
+      margin-bottom: 1rem;
+    }
+    nav a {
+      margin-right: 1rem;
+      text-decoration: none;
+      color: #007bff;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background: #fff;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      margin-bottom: 1rem;
+      color: #333;
+    }
+    .match {
+      border-bottom: 1px solid #ddd;
+      padding: 1rem 0;
+    }
+    .match:last-child {
+      border-bottom: none;
+    }
+    .options label {
+      margin-right: 1rem;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 0.6rem;
+      margin-top: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    #jackpot-info {
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: #eef;
+      border-radius: 5px;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
+    }
+    .success {
+      color: green;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
-<div id="jackpot-info"></div>
   <nav>
     <a href="dashboard.html">Dashboard</a>
     <a href="wallet.html">Wallet</a>
@@ -26,61 +83,63 @@
   </nav>
 
   <div class="container">
-    <h2>Jackpot</h2>
-    <p id="jackpotMessage">Loading available rounds...</p>
+    <h2>🎯 Jackpot</h2>
+    <div id="jackpot-info">Loading jackpot info...</div>
 
     <div id="matchesContainer"></div>
 
     <input type="number" id="betAmount" placeholder="Enter amount to bet" />
-
     <button id="placeBetBtn">Place Bet</button>
   </div>
 
- <script>
-  const API_URL = "https://premierpredict.onrender.com/api";
+  <script>
+    const API_URL = "https://premierpredict.onrender.com/api";
 
-  function getToken() { 
-    return localStorage.getItem("token"); 
-  }
-
-  function logout() { 
-    localStorage.removeItem("token"); 
-    window.location.href = "index.html"; 
-  }
-
-  document.getElementById("logoutBtn").addEventListener("click", logout);
-
-  async function loadJackpot() {
-    const token = getToken();
-    if (!token) { 
-      alert("⚠ Please login first."); 
-      window.location.href = "index.html"; 
-      return; 
+    // 🔹 Get token
+    function getToken() {
+      return localStorage.getItem("token");
     }
 
-    try {
-      const res = await fetch(`${API_URL}/jackpot`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
+    // 🔹 Logout
+    function logout() {
+      localStorage.removeItem("token");
+      window.location.href = "index.html";
+    }
+    document.getElementById("logoutBtn").addEventListener("click", logout);
 
-      const jackpotDiv = document.getElementById("jackpotMessage");
-      const matchesContainer = document.getElementById("matchesContainer");
+    // 🔹 Load Jackpot
+    async function loadJackpot() {
+      const token = getToken();
+      if (!token) {
+        alert("⚠ Please login first.");
+        window.location.href = "index.html";
+        return;
+      }
 
-      if (data.message) {
-        jackpotDiv.innerText = data.message;
-        matchesContainer.innerHTML = "";
-      } else {
+      try {
+        const res = await fetch(`${API_URL}/jackpot`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const data = await res.json();
+        const jackpotDiv = document.getElementById("jackpot-info");
+        const matchesContainer = document.getElementById("matchesContainer");
+
+        if (!res.ok) {
+          jackpotDiv.innerHTML = `<p class="error">${data.message || "Error loading jackpot."}</p>`;
+          matchesContainer.innerHTML = "";
+          return;
+        }
+
         jackpotDiv.innerHTML = `
           <p><b>Round:</b> ${data.name}</p>
           <p><b>Prize Pool:</b> ₦${(data.prize_pool_kobo / 100).toLocaleString()}</p>
           <p><b>Status:</b> ${data.status}</p>
         `;
 
-        // render matches with radio options
         matchesContainer.innerHTML = data.matches.map(match => `
           <div class="match">
-            <p><b>${match.home_team}</b> vs <b>${match.away_team}</b> <br>
+            <p><b>${match.home_team}</b> vs <b>${match.away_team}</b><br>
             <small>${new Date(match.match_time).toLocaleString()}</small></p>
             <div class="options">
               <label><input type="radio" name="match_${match.match_id}" value="home_win"> Home Win</label>
@@ -89,64 +148,66 @@
             </div>
           </div>
         `).join("");
+      } catch (err) {
+        document.getElementById("jackpot-info").innerHTML = `<p class="error">❌ Network error. Try again later.</p>`;
+        console.error(err);
       }
-    } catch (err) {
-      alert("❌ Error fetching jackpot data");
-      console.error(err);
-      document.getElementById("jackpotMessage").innerText = "⚠ Error loading jackpot.";
-    }
-  }
-
-  async function placeBet() {
-    const token = getToken();
-    const amount = document.getElementById("betAmount").value;
-
-    if (!amount) {
-      return alert("Enter amount to bet");
     }
 
-    // collect all match selections
-    const selections = [];
-    document.querySelectorAll("#matchesContainer .match").forEach(matchDiv => {
-      const radios = matchDiv.querySelectorAll("input[type=radio]");
-      let chosen = null;
-      radios.forEach(r => { if (r.checked) chosen = r.value; });
+    // 🔹 Place Bet
+    async function placeBet() {
+      const token = getToken();
+      const amount = document.getElementById("betAmount").value;
 
-      if (chosen) {
-        const matchId = radios[0].name.split("_")[1]; // extract ID from "match_1"
-        selections.push({ match_id: matchId, choice: chosen });
+      if (!amount || amount <= 0) {
+        return alert("⚠ Enter a valid amount to bet.");
       }
-    });
 
-    if (selections.length === 0) {
-      return alert("⚠ Please make at least one selection.");
-    }
+      const selections = [];
+      document.querySelectorAll("#matchesContainer .match").forEach(matchDiv => {
+        const radios = matchDiv.querySelectorAll("input[type=radio]");
+        let chosen = null;
+        radios.forEach(r => { if (r.checked) chosen = r.value; });
 
-    try {
-      const res = await fetch(`${API_URL}/jackpot/bet`, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ amount, selections }),
+        if (chosen) {
+          const matchId = radios[0].name.split("_")[1];
+          selections.push({ match_id: matchId, choice: chosen });
+        }
       });
 
-      const data = await res.json();
-      alert(data.message || "✅ Bet placed!");
-      loadJackpot(); // refresh jackpot info
-    } catch (err) {
-      alert("❌ Error placing bet");
-      console.error(err);
+      if (selections.length === 0) {
+        return alert("⚠ Please make at least one selection.");
+      }
+
+      try {
+        const res = await fetch(`${API_URL}/jackpot/bet`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ amount, selections }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          alert("❌ " + (data.message || "Error placing bet."));
+          return;
+        }
+
+        alert("✅ " + (data.message || "Bet placed successfully!"));
+        loadJackpot(); // refresh jackpot info
+      } catch (err) {
+        alert("❌ Network error while placing bet.");
+        console.error(err);
+      }
     }
-  }
 
-  document.getElementById("placeBetBtn").addEventListener("click", placeBet);
+    document.getElementById("placeBetBtn").addEventListener("click", placeBet);
 
-  // load jackpot immediately and refresh every 15s
-  loadJackpot();
-  setInterval(loadJackpot, 15000);
- </script>
-
+    // Auto-load jackpot every 15 seconds
+    loadJackpot();
+    setInterval(loadJackpot, 15000);
+  </script>
 </body>
 </html>
