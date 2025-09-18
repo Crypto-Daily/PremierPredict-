@@ -40,19 +40,16 @@
     .options label {
       margin-right: 1rem;
     }
-    input, select, button {
-      width: 100%;
-      padding: 0.6rem;
-      margin-top: 0.5rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
     button {
-      background: #007bff;
-      color: white;
+      width: 100%;
+      padding: 0.8rem;
+      margin-top: 1rem;
       border: none;
+      border-radius: 4px;
       font-weight: bold;
       cursor: pointer;
+      background: #007bff;
+      color: white;
       transition: 0.3s;
     }
     button:hover {
@@ -66,10 +63,6 @@
     }
     .error {
       color: red;
-      font-weight: bold;
-    }
-    .success {
-      color: green;
       font-weight: bold;
     }
   </style>
@@ -88,19 +81,18 @@
 
     <div id="matchesContainer"></div>
 
-    <input type="number" id="betAmount" placeholder="Enter amount to bet" />
+    <p><b>Bet Amount:</b> ₦100 (fixed)</p>
     <button id="placeBetBtn">Place Bet</button>
+    <button id="refreshBtn">🔄 Refresh Jackpot</button>
   </div>
 
   <script>
     const API_URL = "https://premierpredict.onrender.com/api";
 
-    // 🔹 Get token
     function getToken() {
       return localStorage.getItem("token");
     }
 
-    // 🔹 Logout
     function logout() {
       localStorage.removeItem("token");
       window.location.href = "index.html";
@@ -157,11 +149,7 @@
     // 🔹 Place Bet
     async function placeBet() {
       const token = getToken();
-      const amount = document.getElementById("betAmount").value;
-
-      if (!amount || amount <= 0) {
-        return alert("⚠ Enter a valid amount to bet.");
-      }
+      const amount = 100; // fixed price
 
       const selections = [];
       document.querySelectorAll("#matchesContainer .match").forEach(matchDiv => {
@@ -196,7 +184,7 @@
         }
 
         alert("✅ " + (data.message || "Bet placed successfully!"));
-        loadJackpot(); // refresh jackpot info
+        loadJackpot();
       } catch (err) {
         alert("❌ Network error while placing bet.");
         console.error(err);
@@ -204,10 +192,10 @@
     }
 
     document.getElementById("placeBetBtn").addEventListener("click", placeBet);
+    document.getElementById("refreshBtn").addEventListener("click", loadJackpot);
 
-    // Auto-load jackpot every 15 seconds
+    // Initial load (no auto-refresh)
     loadJackpot();
-    setInterval(loadJackpot, 15000);
   </script>
 </body>
 </html>
