@@ -4,20 +4,17 @@ import pool from "../db.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
+const STAKE_KOBO = 10000; // ₦100 fixed stake
+const ALLOWED_PREDICTIONS = new Set(["home_win", "draw", "away_win"]);
 
 /**
  * GET /api/jackpot
- * Returns the current active jackpot round with matches.
+ * Get current active jackpot round + matches
  */
 router.get("/", authMiddleware, async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT jr.id,
-              jr.name,
-              jr.prize_pool_kobo,
-              jr.status,
-              jr.start_time,
-              jr.end_time,
+      `SELECT jr.id, jr.name, jr.prize_pool_kobo, jr.status, jr.start_time, jr.end_time,
               COALESCE(
                 json_agg(
                   json_build_object(
@@ -27,8 +24,7 @@ router.get("/", authMiddleware, async (req, res) => {
                     'match_time', jm.match_time,
                     'result', jm.result
                   ) ORDER BY jm.match_time
-                ) FILTER (WHERE jm.id IS NOT NULL),
-                '[]'
+                ) FILTER (WHERE jm.id IS NOT NULL), '[]'
               ) AS matches
        FROM jackpot_rounds jr
        LEFT JOIN jackpot_matches jm ON jm.round_id = jr.id
@@ -38,72 +34,86 @@ router.get("/", authMiddleware, async (req, res) => {
        LIMIT 1`
     );
 
-    if (rows.length === 0) {
-      return res.json({ message: "No active jackpot round." });
-    }
-
-    const round = rows[0];
-    round.prize_pool_kobo = Number(round.prize_pool_kobo);
-
-    res.json(round);
+    if (rows.length === 0) return res.json({ message: "No active jackpot round." });
+    res.json(rows[0]);
   } catch (err) {
     console.error("❌ Error fetching jackpot:", err);
-    res.status(500).json({ error: "Server error fetching jackpot.", details: err.message });
+    res.status(500).json({ error: "Server error fetching jackpot." });
   }
 });
 
 /**
- * GET /api/jackpot/bets
- * Show ALL bets (from jackpot_bets) for the logged-in user
+ * POST /api/jackpot/bet
+ * Place a bet with 10 selections
  */
-router.get("/bets", authMiddleware, async (req, res) => {
+router.post("/bet", authMiddleware, async (req, res) => {
+  const client = await pool.connect();
   try {
     const userId = req.user.id;
+    const { selections } = req.body; // [{ match_id, prediction }]
 
-    const { rows } = await pool.query(
-      `SELECT id, round_id, amount_kobo, choice, status, reference, created_at
-       FROM jackpot_bets
-       WHERE user_id = $1
-       ORDER BY created_at DESC`,
-      [userId]
+    if (!selections || selections.length !== 10) {
+      return res.status(400).json({ error: "Must provide 10 selections." });
+    }
+
+    // Validate predictions
+    for (const s of selections) {
+      if (!ALLOWED_PREDICTIONS.has(s.prediction)) {
+        return res.status(400).json({ error: `Invalid prediction: ${s.prediction}` });
+      }
+    }
+
+    await client.query("BEGIN");
+
+    // Insert ticket
+    const ticketRes = await client.query(
+      `INSERT INTO jackpot_tickets (user_id, round_id, amount_kobo, stake_kobo, reference)
+       VALUES ($1, (SELECT id FROM jackpot_rounds WHERE status='active' LIMIT 1),
+               $2, $2, gen_random_uuid())
+       RETURNING id`,
+      [userId, STAKE_KOBO]
     );
 
-    const bets = rows.map(r => ({
-      ...r,
-      amount_kobo: Number(r.amount_kobo),
-      choice: typeof r.choice === "string" ? safeJsonParse(r.choice) : r.choice
-    }));
+    const ticketId = ticketRes.rows[0].id;
 
-    res.json(bets);
+    // Insert selections
+    const values = selections.map((s, i) =>
+      `(${ticketId}, ${s.match_id}, '${s.prediction}')`
+    );
+    await client.query(
+      `INSERT INTO jackpot_selections (ticket_id, match_id, selection)
+       VALUES ${values.join(",")}`
+    );
+
+    await client.query("COMMIT");
+    res.json({ message: "Bet placed successfully", ticket_id: ticketId });
   } catch (err) {
-    console.error("❌ Error fetching jackpot bets:", err);
-    res.status(500).json({ error: "Server error fetching bets.", details: err.message });
+    await client.query("ROLLBACK");
+    console.error("❌ Error placing bet:", err);
+    res.status(500).json({ error: "Server error placing bet." });
+  } finally {
+    client.release();
   }
 });
 
 /**
  * GET /api/jackpot/tickets
- * Show ALL tickets + selections (not limited by round)
+ * Get all tickets + selections for logged-in user
  */
 router.get("/tickets", authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
-
     const { rows } = await pool.query(
-      `SELECT t.id as ticket_id,
-              t.round_id,
-              t.amount_kobo,
-              t.stake_kobo,
-              t.reference,
-              t.created_at,
+      `SELECT t.id, t.round_id, t.amount_kobo, t.stake_kobo, t.reference, t.created_at,
               COALESCE(
                 json_agg(
                   json_build_object(
                     'match_id', s.match_id,
-                    'selection', s.selection
+                    'selection', s.selection,
+                    'result', s.result,
+                    'is_correct', s.is_correct
                   )
-                ) FILTER (WHERE s.id IS NOT NULL),
-                '[]'
+                ) FILTER (WHERE s.id IS NOT NULL), '[]'
               ) AS selections
        FROM jackpot_tickets t
        LEFT JOIN jackpot_selections s ON s.ticket_id = t.id
@@ -119,22 +129,11 @@ router.get("/tickets", authMiddleware, async (req, res) => {
       stake_kobo: Number(r.stake_kobo)
     }));
 
-    res.json(tickets);
+    res.json({ tickets });
   } catch (err) {
-    console.error("❌ Error fetching jackpot tickets:", err);
-    res.status(500).json({ error: "Server error fetching tickets.", details: err.message });
+    console.error("❌ Error fetching tickets:", err);
+    res.status(500).json({ error: "Server error fetching tickets." });
   }
 });
-
-/**
- * Helper: safely parse JSON (avoid crashing if malformed string is stored)
- */
-function safeJsonParse(str) {
-  try {
-    return JSON.parse(str);
-  } catch {
-    return str;
-  }
-}
 
 export default router;
