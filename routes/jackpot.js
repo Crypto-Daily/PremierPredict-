@@ -5,9 +5,6 @@ import { authMiddleware } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-const ALLOWED_PREDICTIONS = new Set(["home_win", "draw", "away_win"]);
-const STAKE_KOBO = 10000; // ₦100 fixed stake
-
 /**
  * GET /api/jackpot
  * Returns the current active jackpot round with matches.
@@ -57,7 +54,7 @@ router.get("/", authMiddleware, async (req, res) => {
 
 /**
  * GET /api/jackpot/bets
- * Show all bets (from jackpot_bets) for the logged-in user
+ * Show ALL bets (from jackpot_bets) for the logged-in user
  */
 router.get("/bets", authMiddleware, async (req, res) => {
   try {
@@ -71,11 +68,10 @@ router.get("/bets", authMiddleware, async (req, res) => {
       [userId]
     );
 
-    // Parse JSON choices (so frontend gets an object not raw text)
     const bets = rows.map(r => ({
       ...r,
       amount_kobo: Number(r.amount_kobo),
-      choice: typeof r.choice === "string" ? JSON.parse(r.choice) : r.choice
+      choice: typeof r.choice === "string" ? safeJsonParse(r.choice) : r.choice
     }));
 
     res.json(bets);
@@ -87,7 +83,7 @@ router.get("/bets", authMiddleware, async (req, res) => {
 
 /**
  * GET /api/jackpot/tickets
- * Show all tickets + selections (old method)
+ * Show ALL tickets + selections (not limited by round)
  */
 router.get("/tickets", authMiddleware, async (req, res) => {
   try {
@@ -129,5 +125,16 @@ router.get("/tickets", authMiddleware, async (req, res) => {
     res.status(500).json({ error: "Server error fetching tickets.", details: err.message });
   }
 });
+
+/**
+ * Helper: safely parse JSON (avoid crashing if malformed string is stored)
+ */
+function safeJsonParse(str) {
+  try {
+    return JSON.parse(str);
+  } catch {
+    return str;
+  }
+}
 
 export default router;
