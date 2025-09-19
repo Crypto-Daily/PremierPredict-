@@ -101,7 +101,7 @@
     }
     document.getElementById("logoutBtn").addEventListener("click", logout);
 
-    // 🔹 Load Jackpot
+    // 🔹 Load Jackpot Info + Matches
     async function loadJackpot() {
       const token = getToken();
       if (!token) {
@@ -135,9 +135,9 @@
             <p><b>${match.home_team}</b> vs <b>${match.away_team}</b><br>
             <small>${new Date(match.match_time).toLocaleString()}</small></p>
             <div class="options">
-              <label><input type="radio" name="match_${match.match_id}" value="home_win"> Home Win</label>
+              <label><input type="radio" name="match_${match.match_id}" value="home"> Home Win</label>
               <label><input type="radio" name="match_${match.match_id}" value="draw"> Draw</label>
-              <label><input type="radio" name="match_${match.match_id}" value="away_win"> Away Win</label>
+              <label><input type="radio" name="match_${match.match_id}" value="away"> Away Win</label>
             </div>
           </div>
         `).join("");
@@ -189,7 +189,7 @@
       }
     }
 
-    // 🔹 Load My Tickets + Results
+    // 🔹 Load My Tickets
     async function loadTickets() {
       const token = getToken();
       try {
@@ -199,18 +199,19 @@
         const data = await res.json();
         const container = document.getElementById("ticketsContainer");
 
-        if (!res.ok || !data.tickets) {
+        if (!res.ok || !data.tickets || data.tickets.length === 0) {
           container.innerHTML = "<p>No tickets found.</p>";
           return;
         }
 
         container.innerHTML = data.tickets.map(t => `
           <div class="ticket">
-            <p><b>Ticket #${t.id}</b> — ₦${t.amount_kobo/100} — <b>${t.status}</b></p>
+            <p><b>Ticket #${t.id}</b> — ₦${t.amount_kobo/100} — <b>${t.status}</b> (Round ${t.round_id})</p>
             <ul>
               ${t.selections.map(s => `
                 <li>
-                  Match ${s.match_id}: You → ${s.selection}, Result → ${s.result || "pending"}
+                  Match ${s.match_id}: You → ${s.selection}, 
+                  Result → ${s.result || "pending"}
                   ${s.is_correct === true ? "✅" : s.is_correct === false ? "❌" : ""}
                 </li>
               `).join("")}
@@ -230,4 +231,4 @@
     loadTickets();
   </script>
 </body>
-  </html>
+</html>
