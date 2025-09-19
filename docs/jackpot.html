@@ -147,49 +147,49 @@
     }
 
     // 🔹 Place Bet
-    async function placeBet() {
-      const token = getToken();
-      const amount = 100; // fixed price
+async function placeBet() {
+  const token = getToken();
+  const amount = 100; // fixed price
 
-      const selections = [];
-      document.querySelectorAll("#matchesContainer .match").forEach(matchDiv => {
-        const radios = matchDiv.querySelectorAll("input[type=radio]");
-        let chosen = null;
-        radios.forEach(r => { if (r.checked) chosen = r.value; });
+  const selections = [];
+  document.querySelectorAll("#matchesContainer .match").forEach(matchDiv => {
+    const radios = matchDiv.querySelectorAll("input[type=radio]");
+    let chosen = null;
+    radios.forEach(r => { if (r.checked) chosen = r.value; });
 
-        if (chosen) {
-          const matchId = radios[0].name.split("_")[1];
-          selections.push({ match_id: matchId, choice: chosen });
-        }
-      });
-
-      if (selections.length === 0) {
-        return alert("⚠ Please make at least one selection.");
-      }
-
-      try {
-        const res = await fetch(`${API_URL}/jackpot/bet`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({ amount, selections }),
-        });
-
-        const data = await res.json();
-        if (!res.ok) {
-          alert("❌ " + (data.message || "Error placing bet."));
-          return;
-        }
-
-        alert("✅ " + (data.message || "Bet placed successfully!"));
-        loadJackpot();
-      } catch (err) {
-        alert("❌ Network error while placing bet.");
-        console.error(err);
-      }
+    if (chosen) {
+      const matchId = radios[0].name.split("_")[1];
+      selections.push({ match_id: matchId, prediction: chosen }); // ✅ fixed
     }
+  });
+
+  if (selections.length !== 10) {
+    return alert("⚠ You must make predictions for all 10 matches.");
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/jackpot/bet`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ amount, selections }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      alert("❌ " + (data.error || data.message || "Error placing bet."));
+      return;
+    }
+
+    alert("✅ " + (data.message || "Bet placed successfully!"));
+    loadJackpot();
+  } catch (err) {
+    alert("❌ Network error while placing bet.");
+    console.error(err);
+  }
+}
 
     document.getElementById("placeBetBtn").addEventListener("click", placeBet);
     document.getElementById("refreshBtn").addEventListener("click", loadJackpot);
