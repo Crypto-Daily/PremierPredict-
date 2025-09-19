@@ -19,7 +19,7 @@
       color: #007bff;
     }
     .container {
-      max-width: 700px;
+      max-width: 800px;
       margin: auto;
       background: #fff;
       padding: 2rem;
@@ -30,11 +30,11 @@
       margin-bottom: 1rem;
       color: #333;
     }
-    .match {
+    .match, .ticket {
       border-bottom: 1px solid #ddd;
       padding: 1rem 0;
     }
-    .match:last-child {
+    .match:last-child, .ticket:last-child {
       border-bottom: none;
     }
     .options label {
@@ -61,10 +61,9 @@
       background: #eef;
       border-radius: 5px;
     }
-    .error {
-      color: red;
-      font-weight: bold;
-    }
+    .error { color: red; font-weight: bold; }
+    .correct { color: green; font-weight: bold; }
+    .wrong { color: red; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -84,6 +83,9 @@
     <p><b>Bet Amount:</b> ₦100 (fixed)</p>
     <button id="placeBetBtn">Place Bet</button>
     <button id="refreshBtn">🔄 Refresh Jackpot</button>
+
+    <h3 style="margin-top:2rem;">📜 My Tickets</h3>
+    <div id="ticketsContainer">Loading tickets...</div>
   </div>
 
   <script>
@@ -112,13 +114,12 @@
         const res = await fetch(`${API_URL}/jackpot`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-
         const data = await res.json();
         const jackpotDiv = document.getElementById("jackpot-info");
         const matchesContainer = document.getElementById("matchesContainer");
 
-        if (!res.ok) {
-          jackpotDiv.innerHTML = `<p class="error">${data.message || "Error loading jackpot."}</p>`;
+        if (!res.ok || !data.matches) {
+          jackpotDiv.innerHTML = `<p class="error">${data.message || "No active jackpot round."}</p>`;
           matchesContainer.innerHTML = "";
           return;
         }
@@ -141,61 +142,92 @@
           </div>
         `).join("");
       } catch (err) {
-        document.getElementById("jackpot-info").innerHTML = `<p class="error">❌ Network error. Try again later.</p>`;
+        document.getElementById("jackpot-info").innerHTML = `<p class="error">❌ Network error.</p>`;
         console.error(err);
       }
     }
 
-   // 🔹 Place Bet
-async function placeBet() {
-  const token = getToken();
+    // 🔹 Place Bet
+    async function placeBet() {
+      const token = getToken();
+      const selections = [];
+      document.querySelectorAll("#matchesContainer .match").forEach(matchDiv => {
+        const radios = matchDiv.querySelectorAll("input[type=radio]");
+        let chosen = null;
+        radios.forEach(r => { if (r.checked) chosen = r.value; });
+        if (chosen) {
+          const matchId = Number(radios[0].name.split("_")[1]);
+          selections.push({ match_id: matchId, prediction: chosen });
+        }
+      });
 
-  const selections = [];
-  document.querySelectorAll("#matchesContainer .match").forEach(matchDiv => {
-    const radios = matchDiv.querySelectorAll("input[type=radio]");
-    let chosen = null;
-    radios.forEach(r => { if (r.checked) chosen = r.value; });
+      if (selections.length !== 10) {
+        return alert("⚠ You must make predictions for all 10 matches.");
+      }
 
-    if (chosen) {
-      const matchId = Number(radios[0].name.split("_")[1]); // ensure number
-      selections.push({ match_id: matchId, prediction: chosen });
+      try {
+        const res = await fetch(`${API_URL}/jackpot/bet`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ selections }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          alert("❌ " + (data.error || "Error placing bet."));
+          return;
+        }
+
+        alert("✅ " + (data.message || "Bet placed!"));
+        loadTickets();
+      } catch (err) {
+        alert("❌ Network error.");
+        console.error(err);
+      }
     }
-  });
 
-  if (selections.length !== 10) {
-    return alert("⚠ You must make predictions for all 10 matches.");
-  }
+    // 🔹 Load My Tickets + Results
+    async function loadTickets() {
+      const token = getToken();
+      try {
+        const res = await fetch(`${API_URL}/jackpot/tickets`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        const container = document.getElementById("ticketsContainer");
 
-  try {
-    const res = await fetch(`${API_URL}/jackpot/bet`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      // ✅ send only selections (backend already knows stake is ₦100)
-      body: JSON.stringify({ selections }),
-    });
+        if (!res.ok || !data.tickets) {
+          container.innerHTML = "<p>No tickets found.</p>";
+          return;
+        }
 
-    const data = await res.json();
-    if (!res.ok) {
-      alert("❌ " + (data.error || data.message || "Error placing bet."));
-      return;
+        container.innerHTML = data.tickets.map(t => `
+          <div class="ticket">
+            <p><b>Ticket #${t.id}</b> — ₦${t.amount_kobo/100} — <b>${t.status}</b></p>
+            <ul>
+              ${t.selections.map(s => `
+                <li>
+                  Match ${s.match_id}: You → ${s.selection}, Result → ${s.result || "pending"}
+                  ${s.is_correct === true ? "✅" : s.is_correct === false ? "❌" : ""}
+                </li>
+              `).join("")}
+            </ul>
+          </div>
+        `).join("");
+      } catch (err) {
+        document.getElementById("ticketsContainer").innerHTML = "<p class='error'>❌ Could not load tickets.</p>";
+      }
     }
-
-    alert("✅ " + (data.message || "Bet placed successfully!"));
-    loadJackpot();
-  } catch (err) {
-    alert("❌ Network error while placing bet.");
-    console.error(err);
-  }
-}
 
     document.getElementById("placeBetBtn").addEventListener("click", placeBet);
     document.getElementById("refreshBtn").addEventListener("click", loadJackpot);
 
-    // Initial load (no auto-refresh)
+    // Initial load
     loadJackpot();
+    loadTickets();
   </script>
 </body>
-</html>
+  </html>
