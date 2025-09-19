@@ -6,11 +6,11 @@ import { authMiddleware } from "../middleware/authMiddleware.js";
 const router = express.Router();
 
 const ALLOWED_PREDICTIONS = new Set(["home_win", "draw", "away_win"]);
-const STAKE_KOBO = 10000; // fixed ₦100 stake in kobo
+const STAKE_KOBO = 10000; // ₦100 fixed stake
 
 /**
  * GET /api/jackpot
- * Return the current active jackpot round with matches.
+ * Returns the current active jackpot round with matches.
  */
 router.get("/", authMiddleware, async (req, res) => {
   try {
@@ -45,21 +45,23 @@ router.get("/", authMiddleware, async (req, res) => {
       return res.json({ message: "No active jackpot round." });
     }
 
-    // Convert numeric fields to numbers for frontend convenience (optional)
     const round = rows[0];
     round.prize_pool_kobo = Number(round.prize_pool_kobo);
 
     res.json(round);
   } catch (err) {
-    console.error("Error fetching jackpot:", err);
-    res.status(500).json({ error: "Server error fetching jackpot." });
+    console.error("❌ Error fetching jackpot:", err);
+    res.status(500).json({
+      error: "Server error fetching jackpot.",
+      details: err.message,
+    });
   }
 });
 
 /**
  * POST /api/jackpot/bet
- * Body: { selections: [{ match_id: 1, prediction: "home_win" }, ... (10)] }
- * Creates a ticket, deducts fixed stake (₦100), and inserts selections.
+ * Body: { selections: [{ match_id: 1, prediction: "home_win" }, ...] }
+ * Deducts wallet balance, creates ticket, and stores selections.
  */
 router.post("/bet", authMiddleware, async (req, res) => {
   const client = await pool.connect();
@@ -68,62 +70,61 @@ router.post("/bet", authMiddleware, async (req, res) => {
     const { selections } = req.body;
     const userId = req.user.id;
 
-    // Basic validation
+    // 🔹 Validate selections
     if (!Array.isArray(selections) || selections.length !== 10) {
-      return res.status(400).json({ error: "You must provide exactly 10 selections." });
+      return res.status(400).json({
+        error: "You must provide exactly 10 selections.",
+      });
     }
 
-    // validate shape and predictions
     for (const s of selections) {
       if (
         !s ||
-        (typeof s.match_id !== "number" && typeof s.match_id !== "string") ||
+        !s.match_id ||
         !s.prediction ||
         !ALLOWED_PREDICTIONS.has(String(s.prediction))
       ) {
-        return res.status(400).json({ error: "Each selection must include match_id and a valid prediction." });
+        return res.status(400).json({
+          error: "Invalid selection format. Use { match_id, prediction } with valid prediction.",
+        });
       }
     }
 
     await client.query("BEGIN");
 
-    // 1) Get active round
+    // 🔹 Active round
     const roundRes = await client.query(
       `SELECT id FROM jackpot_rounds WHERE status = 'active' ORDER BY created_at DESC LIMIT 1`
     );
     if (roundRes.rows.length === 0) {
-      await client.query("ROLLBACK");
-      return res.status(400).json({ error: "No active jackpot round." });
+      throw new Error("No active jackpot round.");
     }
     const roundId = roundRes.rows[0].id;
 
-    // 2) Confirm all provided match_ids belong to the active round (prevent user submitting arbitrary match ids)
-    const matchIds = selections.map(s => Number(s.match_id));
+    // 🔹 Validate matches belong to round
+    const matchIds = selections.map((s) => Number(s.match_id));
     const matchCheck = await client.query(
       `SELECT id FROM jackpot_matches WHERE round_id = $1 AND id = ANY($2::int[])`,
       [roundId, matchIds]
     );
     if (matchCheck.rows.length !== matchIds.length) {
-      await client.query("ROLLBACK");
-      return res.status(400).json({ error: "One or more selected matches are invalid for the active round." });
+      throw new Error("One or more selected matches are invalid for this round.");
     }
 
-    // 3) Check wallet balance (FOR UPDATE)
+    // 🔹 Check wallet balance
     const walletRes = await client.query(
       "SELECT balance_kobo FROM wallets WHERE user_id = $1 FOR UPDATE",
       [userId]
     );
     if (walletRes.rows.length === 0) {
-      await client.query("ROLLBACK");
-      return res.status(400).json({ error: "Wallet not found." });
+      throw new Error("Wallet not found.");
     }
     const balance = Number(walletRes.rows[0].balance_kobo);
     if (balance < STAKE_KOBO) {
-      await client.query("ROLLBACK");
-      return res.status(400).json({ error: "Insufficient balance." });
+      throw new Error("Insufficient balance.");
     }
 
-    // 4) Deduct wallet
+    // 🔹 Deduct wallet
     await client.query(
       `UPDATE wallets
        SET balance_kobo = balance_kobo - $1, updated_at = NOW()
@@ -131,7 +132,7 @@ router.post("/bet", authMiddleware, async (req, res) => {
       [STAKE_KOBO, userId]
     );
 
-    // 5) Insert wallet transaction
+    // 🔹 Insert wallet transaction
     const reference = `jackpot_${Date.now()}`;
     await client.query(
       `INSERT INTO wallet_txns (user_id, type, amount_kobo, reference, status, created_at)
@@ -139,7 +140,7 @@ router.post("/bet", authMiddleware, async (req, res) => {
       [userId, STAKE_KOBO, reference]
     );
 
-    // 6) Insert ticket and get ticket id
+    // 🔹 Create ticket
     const ticketRes = await client.query(
       `INSERT INTO jackpot_tickets (user_id, round_id, amount_kobo, stake_kobo, reference, created_at)
        VALUES ($1, $2, $3, $4, $5, NOW())
@@ -148,32 +149,34 @@ router.post("/bet", authMiddleware, async (req, res) => {
     );
     const ticketId = ticketRes.rows[0].id;
 
-    // 7) Parameterized multi-row insert for selections
-    // build placeholders and params array: ($1,$2,$3),($4,$5,$6),...
+    // 🔹 Insert selections
     const values = [];
     const params = [];
-    let paramIdx = 1;
-
+    let idx = 1;
     for (const s of selections) {
-      values.push(`($${paramIdx++}, $${paramIdx++}, $${paramIdx++})`);
+      values.push(`($${idx++}, $${idx++}, $${idx++})`);
       params.push(ticketId, Number(s.match_id), String(s.prediction));
     }
-
-    const insertQuery = `
-      INSERT INTO jackpot_selections (ticket_id, match_id, selection)
-      VALUES ${values.join(",")}
-      RETURNING id
-    `;
-
-    await client.query(insertQuery, params);
+    await client.query(
+      `INSERT INTO jackpot_selections (ticket_id, match_id, selection)
+       VALUES ${values.join(",")}`,
+      params
+    );
 
     await client.query("COMMIT");
 
-    return res.json({ message: "✅ Ticket placed successfully!", ticketId, reference });
+    return res.json({
+      message: "✅ Ticket placed successfully!",
+      ticketId,
+      reference,
+    });
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error("Error placing jackpot ticket:", err);
-    return res.status(500).json({ error: "Server error placing ticket." });
+    console.error("❌ Error placing jackpot ticket:", err);
+    return res.status(500).json({
+      error: "Server error placing ticket.",
+      details: err.message,
+    });
   } finally {
     client.release();
   }
@@ -181,14 +184,14 @@ router.post("/bet", authMiddleware, async (req, res) => {
 
 /**
  * GET /api/jackpot/tickets/:ticketId/results
- * Return each selection, the match result and whether it is correct; and a summary.
+ * Shows selections, results, and summary.
  */
 router.get("/tickets/:ticketId/results", authMiddleware, async (req, res) => {
   try {
     const ticketId = Number(req.params.ticketId);
 
     if (!Number.isInteger(ticketId)) {
-      return res.status(400).json({ error: "Invalid ticketId" });
+      return res.status(400).json({ error: "Invalid ticketId." });
     }
 
     const selectionsQuery = `
@@ -218,11 +221,14 @@ router.get("/tickets/:ticketId/results", authMiddleware, async (req, res) => {
     return res.json({
       ticketId,
       selections: selections.rows,
-      summary: status.rows[0] || { ticket_status: "NOT_FOUND", correct_count: 0 }
+      summary: status.rows[0] || { ticket_status: "NOT_FOUND", correct_count: 0 },
     });
   } catch (err) {
-    console.error("Error fetching ticket results:", err);
-    return res.status(500).json({ error: "Server error fetching results." });
+    console.error("❌ Error fetching ticket results:", err);
+    return res.status(500).json({
+      error: "Server error fetching results.",
+      details: err.message,
+    });
   }
 });
 
