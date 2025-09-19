@@ -146,10 +146,9 @@
       }
     }
 
-    // 🔹 Place Bet
+   // 🔹 Place Bet
 async function placeBet() {
   const token = getToken();
-  const amount = 100; // fixed price
 
   const selections = [];
   document.querySelectorAll("#matchesContainer .match").forEach(matchDiv => {
@@ -158,8 +157,8 @@ async function placeBet() {
     radios.forEach(r => { if (r.checked) chosen = r.value; });
 
     if (chosen) {
-      const matchId = radios[0].name.split("_")[1];
-      selections.push({ match_id: matchId, prediction: chosen }); // ✅ fixed
+      const matchId = Number(radios[0].name.split("_")[1]); // ensure number
+      selections.push({ match_id: matchId, prediction: chosen });
     }
   });
 
@@ -174,7 +173,8 @@ async function placeBet() {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`
       },
-      body: JSON.stringify({ amount, selections }),
+      // ✅ send only selections (backend already knows stake is ₦100)
+      body: JSON.stringify({ selections }),
     });
 
     const data = await res.json();
