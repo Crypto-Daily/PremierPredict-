@@ -1,107 +1,181 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jackpot - PremierPredict</title>
+  <meta charset="utf-8" />
+  <title>Jackpot — PremierPredict</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 2rem; }
-    .container { max-width: 800px; margin: auto; background: #fff; padding: 2rem;
-      border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    .ticket, .match { border-bottom: 1px solid #ddd; padding: 1rem 0; }
-    button { width: 100%; padding: 0.8rem; margin-top: 1rem; border: none;
-      border-radius: 4px; font-weight: bold; cursor: pointer; background: #007bff; color: white; }
+    body{font-family:Arial, sans-serif;background:#f5f5f5;padding:2rem}
+    .container{max-width:900px;margin:auto;background:#fff;padding:1.5rem;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.08)}
+    h1{margin-top:0}
+    .match, .ticket{border-bottom:1px solid #eee;padding:12px 0}
+    .match:last-child,.ticket:last-child{border-bottom:none}
+    .options label{margin-right:12px}
+    button{background:#007bff;color:#fff;border:none;padding:10px 14px;border-radius:6px;cursor:pointer}
+    .muted{color:#666}
+    .flex{display:flex;gap:8px;align-items:center}
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>🎯 Jackpot</h2>
-    <div id="jackpot-info">Loading jackpot...</div>
-    <div id="matchesContainer"></div>
-    <p><b>Bet Amount:</b> ₦100 (fixed)</p>
-    <button id="placeBetBtn">Place Bet</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h1>Jackpot — Predictions</h1>
+      <div>
+        <a href="dashboard.html">Dashboard</a> · <a href="wallet.html">Wallet</a> · <a href="#" id="logout">Logout</a>
+      </div>
+    </div>
 
-    <h3 style="margin-top:2rem;">📜 My Tickets</h3>
-    <div id="ticketsContainer">Loading tickets...</div>
+    <section id="roundSection">
+      <h2 id="roundName">Loading round…</h2>
+      <div id="roundMeta" class="muted"></div>
+      <div id="matches"></div>
+
+      <p class="muted">Bet amount fixed at ₦100 per ticket.</p>
+      <button id="submitBtn">Place Ticket (₦100)</button>
+    </section>
+
+    <hr style="margin:18px 0">
+
+    <section>
+      <h2>My Bets</h2>
+      <div id="ticketsArea">Loading my tickets…</div>
+    </section>
   </div>
 
-  <script>
-    const API_URL = "http://localhost:5000/api"; // adjust if hosted
+<script>
+const API = "/api/jackpot";
+const getToken = ()=> localStorage.getItem("token");
 
-    function getToken() {
-      return localStorage.getItem("token");
-    }
+// logout
+document.getElementById("logout").addEventListener("click", e=>{
+  e.preventDefault();
+  localStorage.removeItem("token");
+  location.href = "index.html";
+});
 
-    async function loadJackpot() {
-      const res = await fetch(`${API_URL}/jackpot`, {
-        headers: { Authorization: `Bearer ${getToken()}` }
-      });
-      const data = await res.json();
-      const infoDiv = document.getElementById("jackpot-info");
-      if (!data.matches) {
-        infoDiv.innerHTML = "<p>No active jackpot.</p>";
-        return;
-      }
-      infoDiv.innerHTML = `<p><b>${data.name}</b> — Pool: ₦${data.prize_pool_kobo/100}</p>`;
-      document.getElementById("matchesContainer").innerHTML = data.matches.map(m => `
-        <div class="match">
-          <p><b>${m.home_team}</b> vs <b>${m.away_team}</b> (${new Date(m.match_time).toLocaleString()})</p>
-          <label><input type="radio" name="m_${m.match_id}" value="home_win"> Home</label>
-          <label><input type="radio" name="m_${m.match_id}" value="draw"> Draw</label>
-          <label><input type="radio" name="m_${m.match_id}" value="away_win"> Away</label>
+async function fetchJSON(url, opts){
+  const headers = opts?.headers || {};
+  if(getToken()) headers.Authorization = `Bearer ${getToken()}`;
+  const res = await fetch(url, { ...opts, headers });
+  const json = await res.json().catch(()=>({}));
+  return { ok: res.ok, status: res.status, body: json };
+}
+
+async function loadRound(){
+  const r = await fetchJSON(API, { method:"GET" });
+  const roundName = document.getElementById("roundName");
+  const roundMeta = document.getElementById("roundMeta");
+  const matchesDiv = document.getElementById("matches");
+
+  if(!r.ok || !r.body.matches){
+    roundName.textContent = r.body.message || "No active round";
+    roundMeta.textContent = "";
+    matchesDiv.innerHTML = "<p class='muted'>No matches to display</p>";
+    return;
+  }
+
+  const round = r.body;
+  roundName.textContent = round.name;
+  roundMeta.textContent = `Prize pool: ₦${(Number(round.prize_pool_kobo)/100).toLocaleString()} — Status: ${round.status}`;
+
+  // render matches
+  const html = round.matches.map(m=>{
+    return `
+      <div class="match">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <strong>${escapeHtml(m.home_team)}</strong> vs <strong>${escapeHtml(m.away_team)}</strong>
+            <div class="muted">${new Date(m.match_time).toLocaleString()}</div>
+          </div>
+          <div class="options">
+            <label><input type="radio" name="m_${m.match_id}" value="home_win"> Home</label>
+            <label><input type="radio" name="m_${m.match_id}" value="draw"> Draw</label>
+            <label><input type="radio" name="m_${m.match_id}" value="away_win"> Away</label>
+          </div>
         </div>
-      `).join("");
+      </div>
+    `;
+  }).join("");
+  matchesDiv.innerHTML = html;
+}
+
+function escapeHtml(s){ return (s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+document.getElementById("submitBtn").addEventListener("click", async ()=>{
+  // collect selections
+  const matches = document.querySelectorAll(".match");
+  const selections = [];
+  for(const div of matches){
+    const radios = div.querySelectorAll("input[type=radio]");
+    let chosen = null;
+    for(const r of radios) if(r.checked) chosen = r.value;
+    if(!chosen){
+      alert("Please pick a prediction for every match.");
+      return;
     }
+    const matchId = Number(radios[0].name.split("_")[1]);
+    selections.push({ match_id: matchId, prediction: chosen });
+  }
 
-    async function placeBet() {
-      const selections = [];
-      document.querySelectorAll(".match").forEach(div => {
-        const radios = div.querySelectorAll("input[type=radio]");
-        let sel = null;
-        radios.forEach(r => { if (r.checked) sel = r.value; });
-        if (sel) {
-          const matchId = Number(radios[0].name.split("_")[1]);
-          selections.push({ match_id: matchId, prediction: sel });
-        }
-      });
-      if (selections.length !== 10) return alert("⚠ Pick all 10 matches");
+  // POST to backend
+  const { ok, body } = await fetchJSON(`${API}/bet`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ selections })
+  });
 
-      const res = await fetch(`${API_URL}/jackpot/bet`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ selections })
-      });
-      const data = await res.json();
-      alert(data.message || "Bet placed!");
-      loadTickets();
-    }
+  if(!ok){
+    alert("Error placing ticket: " + (body.error || JSON.stringify(body)));
+    return;
+  }
+  alert("Ticket placed! Ref: " + (body.reference || body.ticketId));
+  loadTickets();
+});
 
-    async function loadTickets() {
-      const res = await fetch(`${API_URL}/jackpot/tickets`, {
-        headers: { Authorization: `Bearer ${getToken()}` }
-      });
-      const data = await res.json();
-      const container = document.getElementById("ticketsContainer");
-      if (!data.tickets || data.tickets.length === 0) {
-        container.innerHTML = "<p>No tickets found.</p>";
-        return;
-      }
-      container.innerHTML = data.tickets.map(t => `
-        <div class="ticket">
-          <p><b>Ticket #${t.id}</b> — ₦${t.amount_kobo/100} — Ref: ${t.reference}</p>
-          <ul>
-            ${t.selections.map(s => `
-              <li>Match ${s.match_id}: ${s.selection} → ${s.result || "pending"}
-              ${s.is_correct === true ? "✅" : s.is_correct === false ? "❌" : ""}</li>
-            `).join("")}
-          </ul>
+async function loadTickets(){
+  const target = document.getElementById("ticketsArea");
+  const { ok, body } = await fetchJSON(`${API}/tickets`, { method: "GET" });
+  if(!ok){
+    target.innerHTML = "<p class='muted'>Could not load tickets. Try refreshing.</p>";
+    return;
+  }
+  if(!body.tickets || body.tickets.length === 0){
+    target.innerHTML = "<p class='muted'>No tickets yet.</p>";
+    return;
+  }
+
+  const html = body.tickets.map(t => {
+    const sel = (t.selections || []).map(s => {
+      const correct = s.is_correct === true ? "✅" : s.is_correct === false ? "❌" : "";
+      const res = s.result || "pending";
+      return `<li>Match ${s.match_id}: ${s.selection} → result: ${res} ${correct}</li>`;
+    }).join("");
+
+    return `
+      <div class="ticket">
+        <div style="display:flex;justify-content:space-between">
+          <div><b>Ticket #${t.id}</b> — ₦${(t.amount_kobo/100).toLocaleString()}</div>
+          <div class="muted">${new Date(t.created_at).toLocaleString()}</div>
         </div>
-      `).join("");
-    }
+        <div class="muted">Round ${t.round_id} · ${t.status} · Ref: ${t.reference || ''}</div>
+        <ul>${sel}</ul>
+      </div>
+    `;
+  }).join("");
 
-    document.getElementById("placeBetBtn").addEventListener("click", placeBet);
-    loadJackpot();
-    loadTickets();
-  </script>
+  target.innerHTML = html;
+}
+
+// initial load
+(async ()=>{
+  if(!getToken()){
+    alert("Please login first.");
+    location.href = "index.html";
+    return;
+  }
+  await loadRound();
+  await loadTickets();
+})();
+</script>
 </body>
 </html>
