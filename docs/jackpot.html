@@ -53,6 +53,7 @@ document.getElementById("logout").addEventListener("click", e=>{
   location.href = "index.html";
 });
 
+// helper
 async function fetchJSON(url, opts){
   const headers = opts?.headers || {};
   if(getToken()) headers.Authorization = `Bearer ${getToken()}`;
@@ -61,6 +62,11 @@ async function fetchJSON(url, opts){
   return { ok: res.ok, status: res.status, body: json };
 }
 
+function escapeHtml(s){ 
+  return (s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); 
+}
+
+// load active round + matches
 async function loadRound(){
   const r = await fetchJSON(API, { method:"GET" });
   const roundName = document.getElementById("roundName");
@@ -79,7 +85,7 @@ async function loadRound(){
   roundMeta.textContent = `Prize pool: ₦${(Number(round.prize_pool_kobo)/100).toLocaleString()} — Status: ${round.status}`;
 
   // render matches
-  const html = round.matches.map(m=>{
+  matchesDiv.innerHTML = round.matches.map(m=>{
     return `
       <div class="match">
         <div style="display:flex;justify-content:space-between;align-items:center">
@@ -96,28 +102,30 @@ async function loadRound(){
       </div>
     `;
   }).join("");
-  matchesDiv.innerHTML = html;
 }
 
-function escapeHtml(s){ return (s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
-
+// place ticket
 document.getElementById("submitBtn").addEventListener("click", async ()=>{
-  // collect selections
   const matches = document.querySelectorAll(".match");
   const selections = [];
+
   for(const div of matches){
     const radios = div.querySelectorAll("input[type=radio]");
     let chosen = null;
     for(const r of radios) if(r.checked) chosen = r.value;
     if(!chosen){
-      alert("Please pick a prediction for every match.");
+      alert("⚠️ Please pick a prediction for every match.");
       return;
     }
     const matchId = Number(radios[0].name.split("_")[1]);
     selections.push({ match_id: matchId, prediction: chosen });
   }
 
-  // POST to backend
+  if(selections.length !== 10){
+    alert("⚠️ Exactly 10 predictions are required.");
+    return;
+  }
+
   const { ok, body } = await fetchJSON(`${API}/bet`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -125,16 +133,18 @@ document.getElementById("submitBtn").addEventListener("click", async ()=>{
   });
 
   if(!ok){
-    alert("Error placing ticket: " + (body.error || JSON.stringify(body)));
+    alert("❌ Error placing ticket: " + (body.error || JSON.stringify(body)));
     return;
   }
-  alert("Ticket placed! Ref: " + (body.reference || body.ticketId));
+  alert("✅ Ticket placed! Ref: " + (body.reference || body.ticketId));
   loadTickets();
 });
 
+// load user tickets
 async function loadTickets(){
   const target = document.getElementById("ticketsArea");
   const { ok, body } = await fetchJSON(`${API}/tickets`, { method: "GET" });
+
   if(!ok){
     target.innerHTML = "<p class='muted'>Could not load tickets. Try refreshing.</p>";
     return;
@@ -144,7 +154,7 @@ async function loadTickets(){
     return;
   }
 
-  const html = body.tickets.map(t => {
+  target.innerHTML = body.tickets.map(t => {
     const sel = (t.selections || []).map(s => {
       const correct = s.is_correct === true ? "✅" : s.is_correct === false ? "❌" : "";
       const res = s.result || "pending";
@@ -162,11 +172,9 @@ async function loadTickets(){
       </div>
     `;
   }).join("");
-
-  target.innerHTML = html;
 }
 
-// initial load
+// init
 (async ()=>{
   if(!getToken()){
     alert("Please login first.");
