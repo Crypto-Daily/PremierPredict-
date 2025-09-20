@@ -5,228 +5,101 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Jackpot - PremierPredict</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 2rem;
-      background: #f5f5f5;
-    }
-    nav {
-      margin-bottom: 1rem;
-    }
-    nav a {
-      margin-right: 1rem;
-      text-decoration: none;
-      color: #007bff;
-    }
-    .container {
-      max-width: 800px;
-      margin: auto;
-      background: #fff;
-      padding: 2rem;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    h2 {
-      margin-bottom: 1rem;
-      color: #333;
-    }
-    .match, .ticket {
-      border-bottom: 1px solid #ddd;
-      padding: 1rem 0;
-    }
-    .match:last-child, .ticket:last-child {
-      border-bottom: none;
-    }
-    .options label {
-      margin-right: 1rem;
-    }
-    button {
-      width: 100%;
-      padding: 0.8rem;
-      margin-top: 1rem;
-      border: none;
-      border-radius: 4px;
-      font-weight: bold;
-      cursor: pointer;
-      background: #007bff;
-      color: white;
-      transition: 0.3s;
-    }
-    button:hover {
-      background: #0056b3;
-    }
-    #jackpot-info {
-      margin-bottom: 1rem;
-      padding: 1rem;
-      background: #eef;
-      border-radius: 5px;
-    }
-    .error { color: red; font-weight: bold; }
-    .correct { color: green; font-weight: bold; }
-    .wrong { color: red; font-weight: bold; }
+    body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 2rem; }
+    .container { max-width: 800px; margin: auto; background: #fff; padding: 2rem;
+      border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    .ticket, .match { border-bottom: 1px solid #ddd; padding: 1rem 0; }
+    button { width: 100%; padding: 0.8rem; margin-top: 1rem; border: none;
+      border-radius: 4px; font-weight: bold; cursor: pointer; background: #007bff; color: white; }
   </style>
 </head>
 <body>
-  <nav>
-    <a href="dashboard.html">Dashboard</a>
-    <a href="wallet.html">Wallet</a>
-    <a href="jackpot.html">Jackpot</a>
-    <a href="#" id="logoutBtn">Logout</a>
-  </nav>
-
   <div class="container">
     <h2>🎯 Jackpot</h2>
-    <div id="jackpot-info">Loading jackpot info...</div>
-
+    <div id="jackpot-info">Loading jackpot...</div>
     <div id="matchesContainer"></div>
-
     <p><b>Bet Amount:</b> ₦100 (fixed)</p>
     <button id="placeBetBtn">Place Bet</button>
-    <button id="refreshBtn">🔄 Refresh Jackpot</button>
 
     <h3 style="margin-top:2rem;">📜 My Tickets</h3>
     <div id="ticketsContainer">Loading tickets...</div>
   </div>
 
   <script>
-    const API_URL = "https://premierpredict.onrender.com/api";
+    const API_URL = "http://localhost:5000/api"; // adjust if hosted
 
     function getToken() {
       return localStorage.getItem("token");
     }
 
-    function logout() {
-      localStorage.removeItem("token");
-      window.location.href = "index.html";
-    }
-    document.getElementById("logoutBtn").addEventListener("click", logout);
-
-    // 🔹 Load Jackpot Info + Matches
     async function loadJackpot() {
-      const token = getToken();
-      if (!token) {
-        alert("⚠ Please login first.");
-        window.location.href = "index.html";
+      const res = await fetch(`${API_URL}/jackpot`, {
+        headers: { Authorization: `Bearer ${getToken()}` }
+      });
+      const data = await res.json();
+      const infoDiv = document.getElementById("jackpot-info");
+      if (!data.matches) {
+        infoDiv.innerHTML = "<p>No active jackpot.</p>";
         return;
       }
-
-      try {
-        const res = await fetch(`${API_URL}/jackpot`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const data = await res.json();
-        const jackpotDiv = document.getElementById("jackpot-info");
-        const matchesContainer = document.getElementById("matchesContainer");
-
-        if (!res.ok || !data.matches) {
-          jackpotDiv.innerHTML = `<p class="error">${data.message || "No active jackpot round."}</p>`;
-          matchesContainer.innerHTML = "";
-          return;
-        }
-
-        jackpotDiv.innerHTML = `
-          <p><b>Round:</b> ${data.name}</p>
-          <p><b>Prize Pool:</b> ₦${(data.prize_pool_kobo / 100).toLocaleString()}</p>
-          <p><b>Status:</b> ${data.status}</p>
-        `;
-
-        matchesContainer.innerHTML = data.matches.map(match => `
-          <div class="match">
-            <p><b>${match.home_team}</b> vs <b>${match.away_team}</b><br>
-            <small>${new Date(match.match_time).toLocaleString()}</small></p>
-            <div class="options">
-              <label><input type="radio" name="match_${match.match_id}" value="home"> Home Win</label>
-              <label><input type="radio" name="match_${match.match_id}" value="draw"> Draw</label>
-              <label><input type="radio" name="match_${match.match_id}" value="away"> Away Win</label>
-            </div>
-          </div>
-        `).join("");
-      } catch (err) {
-        document.getElementById("jackpot-info").innerHTML = `<p class="error">❌ Network error.</p>`;
-        console.error(err);
-      }
+      infoDiv.innerHTML = `<p><b>${data.name}</b> — Pool: ₦${data.prize_pool_kobo/100}</p>`;
+      document.getElementById("matchesContainer").innerHTML = data.matches.map(m => `
+        <div class="match">
+          <p><b>${m.home_team}</b> vs <b>${m.away_team}</b> (${new Date(m.match_time).toLocaleString()})</p>
+          <label><input type="radio" name="m_${m.match_id}" value="home_win"> Home</label>
+          <label><input type="radio" name="m_${m.match_id}" value="draw"> Draw</label>
+          <label><input type="radio" name="m_${m.match_id}" value="away_win"> Away</label>
+        </div>
+      `).join("");
     }
 
-    // 🔹 Place Bet
     async function placeBet() {
-      const token = getToken();
       const selections = [];
-      document.querySelectorAll("#matchesContainer .match").forEach(matchDiv => {
-        const radios = matchDiv.querySelectorAll("input[type=radio]");
-        let chosen = null;
-        radios.forEach(r => { if (r.checked) chosen = r.value; });
-        if (chosen) {
+      document.querySelectorAll(".match").forEach(div => {
+        const radios = div.querySelectorAll("input[type=radio]");
+        let sel = null;
+        radios.forEach(r => { if (r.checked) sel = r.value; });
+        if (sel) {
           const matchId = Number(radios[0].name.split("_")[1]);
-          selections.push({ match_id: matchId, prediction: chosen });
+          selections.push({ match_id: matchId, prediction: sel });
         }
       });
+      if (selections.length !== 10) return alert("⚠ Pick all 10 matches");
 
-      if (selections.length !== 10) {
-        return alert("⚠ You must make predictions for all 10 matches.");
-      }
-
-      try {
-        const res = await fetch(`${API_URL}/jackpot/bet`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({ selections }),
-        });
-
-        const data = await res.json();
-        if (!res.ok) {
-          alert("❌ " + (data.error || "Error placing bet."));
-          return;
-        }
-
-        alert("✅ " + (data.message || "Bet placed!"));
-        loadTickets();
-      } catch (err) {
-        alert("❌ Network error.");
-        console.error(err);
-      }
+      const res = await fetch(`${API_URL}/jackpot/bet`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ selections })
+      });
+      const data = await res.json();
+      alert(data.message || "Bet placed!");
+      loadTickets();
     }
 
-    // 🔹 Load My Tickets
     async function loadTickets() {
-      const token = getToken();
-      try {
-        const res = await fetch(`${API_URL}/jackpot/tickets`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const data = await res.json();
-        const container = document.getElementById("ticketsContainer");
-
-        if (!res.ok || !data.tickets || data.tickets.length === 0) {
-          container.innerHTML = "<p>No tickets found.</p>";
-          return;
-        }
-
-        container.innerHTML = data.tickets.map(t => `
-          <div class="ticket">
-            <p><b>Ticket #${t.id}</b> — ₦${t.amount_kobo/100} — <b>${t.status}</b> (Round ${t.round_id})</p>
-            <ul>
-              ${t.selections.map(s => `
-                <li>
-                  Match ${s.match_id}: You → ${s.selection}, 
-                  Result → ${s.result || "pending"}
-                  ${s.is_correct === true ? "✅" : s.is_correct === false ? "❌" : ""}
-                </li>
-              `).join("")}
-            </ul>
-          </div>
-        `).join("");
-      } catch (err) {
-        document.getElementById("ticketsContainer").innerHTML = "<p class='error'>❌ Could not load tickets.</p>";
+      const res = await fetch(`${API_URL}/jackpot/tickets`, {
+        headers: { Authorization: `Bearer ${getToken()}` }
+      });
+      const data = await res.json();
+      const container = document.getElementById("ticketsContainer");
+      if (!data.tickets || data.tickets.length === 0) {
+        container.innerHTML = "<p>No tickets found.</p>";
+        return;
       }
+      container.innerHTML = data.tickets.map(t => `
+        <div class="ticket">
+          <p><b>Ticket #${t.id}</b> — ₦${t.amount_kobo/100} — Ref: ${t.reference}</p>
+          <ul>
+            ${t.selections.map(s => `
+              <li>Match ${s.match_id}: ${s.selection} → ${s.result || "pending"}
+              ${s.is_correct === true ? "✅" : s.is_correct === false ? "❌" : ""}</li>
+            `).join("")}
+          </ul>
+        </div>
+      `).join("");
     }
 
     document.getElementById("placeBetBtn").addEventListener("click", placeBet);
-    document.getElementById("refreshBtn").addEventListener("click", loadJackpot);
-
-    // Initial load
     loadJackpot();
     loadTickets();
   </script>
