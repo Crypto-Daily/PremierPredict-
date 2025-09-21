@@ -1,46 +1,104 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8">
   <title>Jackpot — PremierPredict</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body{font-family:Arial, sans-serif;background:#f5f5f5;padding:2rem}
-    .container{max-width:900px;margin:auto;background:#fff;padding:1.5rem;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.08)}
-    h1{margin-top:0}
-    .match, .ticket{border-bottom:1px solid #eee;padding:12px 0}
-    .match:last-child,.ticket:last-child{border-bottom:none}
-    .options label{margin-right:12px}
-    button{background:#007bff;color:#fff;border:none;padding:10px 14px;border-radius:6px;cursor:pointer}
-    .muted{color:#666}
-    .flex{display:flex;gap:8px;align-items:center}
+    :root {
+      --primary: #007bff;
+      --bg: #f5f7fb;
+      --card: #fff;
+      --text: #222;
+      --muted: #666;
+      --radius: 10px;
+      --shadow: 0 6px 16px rgba(0,0,0,.08);
+    }
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: var(--bg);
+      margin: 0;
+      padding: 0;
+      color: var(--text);
+    }
+    header {
+      background: var(--primary);
+      color: #fff;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 { margin: 0; font-size: 1.4rem; }
+    nav a {
+      color: #fff; margin-left: 1rem; text-decoration: none; font-weight: 500;
+    }
+    nav a:hover { text-decoration: underline; }
+    .container {
+      max-width: 960px;
+      margin: 2rem auto;
+      padding: 1.5rem;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    h2 { margin-top: 0; }
+    .match, .ticket {
+      border: 1px solid #eee;
+      padding: 1rem;
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+      background: #fafafa;
+    }
+    .match strong { font-size: .95rem; }
+    .muted { color: var(--muted); font-size: .85rem; }
+    .options label { margin-right: 12px; cursor: pointer; }
+    button {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: .7rem 1.2rem;
+      border-radius: var(--radius);
+      font-size: 1rem;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+    button:hover { background: #0063d1; }
+    ul { padding-left: 1.2rem; margin: .5rem 0 0; }
+    ul li { margin-bottom: .4rem; }
+    hr { margin: 2rem 0; border: none; border-top: 1px solid #eee; }
+    @media(max-width:600px){
+      header, .container { padding: 1rem; }
+      nav a { margin-left: .5rem; font-size: .9rem; }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-      <h1>Jackpot — Predictions</h1>
-      <div>
-        <a href="dashboard.html">Dashboard</a> · <a href="wallet.html">Wallet</a> · <a href="#" id="logout">Logout</a>
-      </div>
-    </div>
+  <header>
+    <h1>PremierPredict Jackpot</h1>
+    <nav>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="wallet.html">Wallet</a>
+      <a href="#" id="logout">Logout</a>
+    </nav>
+  </header>
 
+  <main class="container">
     <section id="roundSection">
       <h2 id="roundName">Loading round…</h2>
-      <div id="roundMeta" class="muted"></div>
+      <p id="roundMeta" class="muted"></p>
       <div id="matches"></div>
-
       <p class="muted">Bet amount fixed at ₦100 per ticket.</p>
       <button id="submitBtn">Place Ticket (₦100)</button>
     </section>
 
-    <hr style="margin:18px 0">
+    <hr>
 
     <section>
-      <h2>My Bets</h2>
-      <div id="ticketsArea">Loading my tickets…</div>
+      <h2>My Tickets</h2>
+      <div id="ticketsArea">Loading tickets…</div>
     </section>
-  </div>
+  </main>
 
 <script>
 const API = "/api/jackpot";
@@ -53,7 +111,7 @@ document.getElementById("logout").addEventListener("click", e=>{
   location.href = "index.html";
 });
 
-// helper
+// helper for API calls
 async function fetchJSON(url, opts){
   const headers = opts?.headers || {};
   if(getToken()) headers.Authorization = `Bearer ${getToken()}`;
@@ -62,11 +120,12 @@ async function fetchJSON(url, opts){
   return { ok: res.ok, status: res.status, body: json };
 }
 
+// escape HTML
 function escapeHtml(s){ 
   return (s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); 
 }
 
-// load active round + matches
+// load active round
 async function loadRound(){
   const r = await fetchJSON(API, { method:"GET" });
   const roundName = document.getElementById("roundName");
@@ -84,24 +143,21 @@ async function loadRound(){
   roundName.textContent = round.name;
   roundMeta.textContent = `Prize pool: ₦${(Number(round.prize_pool_kobo)/100).toLocaleString()} — Status: ${round.status}`;
 
-  // render matches
-  matchesDiv.innerHTML = round.matches.map(m=>{
-    return `
-      <div class="match">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <strong>${escapeHtml(m.home_team)}</strong> vs <strong>${escapeHtml(m.away_team)}</strong>
-            <div class="muted">${new Date(m.match_time).toLocaleString()}</div>
-          </div>
-          <div class="options">
-            <label><input type="radio" name="m_${m.match_id}" value="home_win"> Home</label>
-            <label><input type="radio" name="m_${m.match_id}" value="draw"> Draw</label>
-            <label><input type="radio" name="m_${m.match_id}" value="away_win"> Away</label>
-          </div>
+  matchesDiv.innerHTML = round.matches.map(m=>`
+    <div class="match">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+        <div>
+          <strong>${escapeHtml(m.home_team)}</strong> vs <strong>${escapeHtml(m.away_team)}</strong>
+          <div class="muted">${new Date(m.match_time).toLocaleString()}</div>
+        </div>
+        <div class="options">
+          <label><input type="radio" name="m_${m.match_id}" value="home_win"> Home</label>
+          <label><input type="radio" name="m_${m.match_id}" value="draw"> Draw</label>
+          <label><input type="radio" name="m_${m.match_id}" value="away_win"> Away</label>
         </div>
       </div>
-    `;
-  }).join("");
+    </div>
+  `).join("");
 }
 
 // place ticket
@@ -133,7 +189,7 @@ document.getElementById("submitBtn").addEventListener("click", async ()=>{
   });
 
   if(!ok){
-    alert("❌ Error placing ticket: " + (body.error || JSON.stringify(body)));
+    alert("❌ Error: " + (body.error || JSON.stringify(body)));
     return;
   }
   alert("✅ Ticket placed! Ref: " + (body.reference || body.ticketId));
@@ -163,7 +219,7 @@ async function loadTickets(){
 
     return `
       <div class="ticket">
-        <div style="display:flex;justify-content:space-between">
+        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;">
           <div><b>Ticket #${t.id}</b> — ₦${(t.amount_kobo/100).toLocaleString()}</div>
           <div class="muted">${new Date(t.created_at).toLocaleString()}</div>
         </div>
