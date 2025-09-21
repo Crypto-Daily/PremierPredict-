@@ -4,27 +4,28 @@ import pool from "../db.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
-const STAKE_KOBO = 10000; // ₦100
+const STAKE_KOBO = 10000; // ₦100 stake
 const ALLOWED = new Set(["home_win", "draw", "away_win"]);
 
 /**
  * GET /api/jackpot
- * Returns the currently active round and its 10 matches
+ * Fetch the current active jackpot round and its matches
  */
 router.get("/", authMiddleware, async (req, res) => {
   try {
     const q = `
       SELECT jr.id, jr.name, jr.prize_pool_kobo, jr.status, jr.start_time, jr.end_time,
              COALESCE(
-               json_agg(json_build_object(
-                 'match_id', jm.id,
-                 'home_team', jm.home_team,
-                 'away_team', jm.away_team,
-                 'match_time', jm.match_time,
-                 'result', jm.result
-               ) ORDER BY jm.match_time)
-               FILTER (WHERE jm.id IS NOT NULL), '[]'
-             ) as matches
+               json_agg(
+                 json_build_object(
+                   'match_id', jm.id,
+                   'home_team', jm.home_team,
+                   'away_team', jm.away_team,
+                   'match_time', jm.match_time,
+                   'result', jm.result
+                 ) ORDER BY jm.match_time
+               ) FILTER (WHERE jm.id IS NOT NULL), '[]'
+             ) AS matches
       FROM jackpot_rounds jr
       LEFT JOIN jackpot_matches jm ON jm.round_id = jr.id
       WHERE jr.status = 'active'
@@ -43,7 +44,7 @@ router.get("/", authMiddleware, async (req, res) => {
 
     return res.json(round);
   } catch (err) {
-    console.error("Error GET /api/jackpot:", err);
+    console.error("❌ Error GET /api/jackpot:", err);
     res.status(500).json({ error: "Server error fetching jackpot." });
   }
 });
@@ -82,7 +83,7 @@ router.post("/bet", authMiddleware, async (req, res) => {
     }
     const roundId = r.rows[0].id;
 
-    // validate match IDs
+    // validate matches
     const matchIds = selections.map(s => Number(s.match_id));
     const matchCheck = await client.query(
       "SELECT id FROM jackpot_matches WHERE round_id = $1 AND id = ANY($2::int[])",
@@ -127,7 +128,7 @@ router.post("/bet", authMiddleware, async (req, res) => {
     );
     const ticketId = t.rows[0].id;
 
-    // insert selections
+    // insert selections (⚠️ now using jackpot_ticket_selections)
     const placeholders = [];
     const params = [];
     let idx = 1;
@@ -136,7 +137,7 @@ router.post("/bet", authMiddleware, async (req, res) => {
       params.push(ticketId, s.match_id, s.prediction);
     }
     await client.query(
-      `INSERT INTO jackpot_selections (ticket_id, match_id, selection) VALUES ${placeholders.join(",")}`,
+      `INSERT INTO jackpot_ticket_selections (ticket_id, match_id, selection) VALUES ${placeholders.join(",")}`,
       params
     );
 
@@ -145,7 +146,7 @@ router.post("/bet", authMiddleware, async (req, res) => {
     return res.json({ message: "Ticket placed successfully", ticketId, reference });
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error("Error POST /api/jackpot/bet:", err);
+    console.error("❌ Error POST /api/jackpot/bet:", err);
     res.status(500).json({ error: "Server error placing ticket." });
   } finally {
     client.release();
@@ -154,7 +155,7 @@ router.post("/bet", authMiddleware, async (req, res) => {
 
 /**
  * GET /api/jackpot/tickets
- * Returns all tickets for the logged-in user
+ * Fetch all tickets + selections for logged-in user
  */
 router.get("/tickets", authMiddleware, async (req, res) => {
   try {
@@ -169,10 +170,10 @@ router.get("/tickets", authMiddleware, async (req, res) => {
                    'result', jm.result,
                    'is_correct', (s.selection = jm.result)
                  ) ORDER BY s.match_id
-               ) FILTER (WHERE s.id IS NOT NULL), '[]'
-             ) as selections
+               ) FILTER (WHERE s.match_id IS NOT NULL), '[]'
+             ) AS selections
       FROM jackpot_tickets t
-      LEFT JOIN jackpot_selections s ON s.ticket_id = t.id
+      LEFT JOIN jackpot_ticket_selections s ON s.ticket_id = t.id
       LEFT JOIN jackpot_matches jm ON jm.id = s.match_id
       WHERE t.user_id = $1
       GROUP BY t.id
@@ -189,7 +190,7 @@ router.get("/tickets", authMiddleware, async (req, res) => {
 
     return res.json({ tickets });
   } catch (err) {
-    console.error("Error GET /api/jackpot/tickets:", err);
+    console.error("❌ Error GET /api/jackpot/tickets:", err);
     res.status(500).json({ error: "Server error fetching tickets." });
   }
 });
