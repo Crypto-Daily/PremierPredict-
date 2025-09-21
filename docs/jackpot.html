@@ -132,7 +132,7 @@ document.getElementById("submitBtn").addEventListener("click", async ()=>{
       return;
     }
     const matchId = Number(radios[0].name.split("_")[1]);
-    selections.push({ match_id: matchId, selection: chosen }); // ✅ use "selection" not "prediction"
+    selections.push({ match_id: matchId, selection: chosen });
   }
 
   if(selections.length !== 10){
