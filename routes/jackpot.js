@@ -13,36 +13,39 @@ const ALLOWED = new Set(["home_win", "draw", "away_win"]);
  */
 router.get("/", authMiddleware, async (req, res) => {
   try {
-    const q = `
-      SELECT jr.id, jr.name, jr.prize_pool_kobo, jr.status, jr.start_time, jr.end_time,
-             COALESCE(
-               json_agg(
-                 json_build_object(
-                   'match_id', jm.id,
-                   'home_team', jm.home_team,
-                   'away_team', jm.away_team,
-                   'match_time', jm.match_time,
-                   'result', jm.result
-                 ) ORDER BY jm.match_time
-               ) FILTER (WHERE jm.id IS NOT NULL), '[]'
-             ) AS matches
-      FROM jackpot_rounds jr
-      LEFT JOIN jackpot_matches jm ON jm.round_id = jr.id
-      WHERE jr.status = 'active'
-      GROUP BY jr.id
-      ORDER BY jr.created_at DESC
-      LIMIT 1;
-    `;
-    const { rows } = await pool.query(q);
+    const roundResult = await pool.query(
+      `SELECT id, name, prize_pool_kobo, status, start_time, end_time
+       FROM jackpot_rounds
+       WHERE status = 'active'
+       AND start_time <= NOW()
+       AND end_time >= NOW()
+       ORDER BY created_at DESC
+       LIMIT 1`
+    );
 
-    if (rows.length === 0) {
-      return res.json({ message: "No active jackpot round." });
+    if (roundResult.rows.length === 0) {
+      return res.json({ message: "No active round" });
     }
 
-    const round = rows[0];
-    round.prize_pool_kobo = Number(round.prize_pool_kobo);
+    const round = roundResult.rows[0];
 
-    return res.json(round);
+    const matchesResult = await pool.query(
+      `SELECT id AS match_id, home_team, away_team, match_time, result
+       FROM jackpot_matches
+       WHERE round_id = $1
+       ORDER BY match_time ASC`,
+      [round.id]
+    );
+
+    res.json({
+      id: round.id,
+      name: round.name,
+      prize_pool_kobo: Number(round.prize_pool_kobo),
+      status: round.status,
+      start_time: round.start_time,
+      end_time: round.end_time,
+      matches: matchesResult.rows
+    });
   } catch (err) {
     console.error("❌ Error GET /api/jackpot:", err);
     res.status(500).json({ error: "Server error fetching jackpot." });
@@ -51,7 +54,6 @@ router.get("/", authMiddleware, async (req, res) => {
 
 /**
  * POST /api/jackpot/bet
- * Body: { selections: [{ match_id, prediction }, ...] }
  */
 router.post("/bet", authMiddleware, async (req, res) => {
   const client = await pool.connect();
@@ -73,17 +75,22 @@ router.post("/bet", authMiddleware, async (req, res) => {
 
     await client.query("BEGIN");
 
-    // find active round
+    // active round
     const r = await client.query(
-      "SELECT id FROM jackpot_rounds WHERE status = 'active' ORDER BY created_at DESC LIMIT 1"
+      `SELECT id FROM jackpot_rounds
+       WHERE status = 'active'
+       AND start_time <= NOW()
+       AND end_time >= NOW()
+       ORDER BY created_at DESC
+       LIMIT 1`
     );
     if (r.rows.length === 0) {
       await client.query("ROLLBACK");
-      return res.status(400).json({ error: "No active jackpot round." });
+      return res.status(400).json({ error: "No active round." });
     }
     const roundId = r.rows[0].id;
 
-    // validate matches
+    // match validation
     const matchIds = selections.map(s => Number(s.match_id));
     const matchCheck = await client.query(
       "SELECT id FROM jackpot_matches WHERE round_id = $1 AND id = ANY($2::int[])",
@@ -94,8 +101,11 @@ router.post("/bet", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Invalid matches for this round." });
     }
 
-    // check wallet
-    const w = await client.query("SELECT balance_kobo FROM wallets WHERE user_id = $1 FOR UPDATE", [userId]);
+    // wallet check
+    const w = await client.query(
+      "SELECT balance_kobo FROM wallets WHERE user_id = $1 FOR UPDATE",
+      [userId]
+    );
     if (w.rows.length === 0) {
       await client.query("ROLLBACK");
       return res.status(400).json({ error: "Wallet not found." });
@@ -105,13 +115,13 @@ router.post("/bet", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Insufficient balance." });
     }
 
-    // deduct from wallet
+    // deduct
     await client.query(
       "UPDATE wallets SET balance_kobo = balance_kobo - $1, updated_at = NOW() WHERE user_id = $2",
       [STAKE_KOBO, userId]
     );
 
-    // insert wallet transaction
+    // wallet txn
     const reference = `jackpot_${Date.now()}`;
     await client.query(
       `INSERT INTO wallet_txns (user_id, type, amount_kobo, reference, status, created_at)
@@ -119,7 +129,7 @@ router.post("/bet", authMiddleware, async (req, res) => {
       [userId, STAKE_KOBO, reference]
     );
 
-    // create ticket
+    // ticket
     const t = await client.query(
       `INSERT INTO jackpot_tickets (user_id, round_id, amount_kobo, stake_kobo, reference, status, created_at)
        VALUES ($1, $2, $3, $3, $4, 'pending', NOW())
@@ -128,7 +138,7 @@ router.post("/bet", authMiddleware, async (req, res) => {
     );
     const ticketId = t.rows[0].id;
 
-    // insert selections (⚠️ now using jackpot_ticket_selections)
+    // selections
     const placeholders = [];
     const params = [];
     let idx = 1;
@@ -143,7 +153,7 @@ router.post("/bet", authMiddleware, async (req, res) => {
 
     await client.query("COMMIT");
 
-    return res.json({ message: "Ticket placed successfully", ticketId, reference });
+    res.json({ message: "Ticket placed successfully", ticketId, reference });
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("❌ Error POST /api/jackpot/bet:", err);
@@ -155,7 +165,6 @@ router.post("/bet", authMiddleware, async (req, res) => {
 
 /**
  * GET /api/jackpot/tickets
- * Fetch all tickets + selections for logged-in user
  */
 router.get("/tickets", authMiddleware, async (req, res) => {
   try {
@@ -177,7 +186,7 @@ router.get("/tickets", authMiddleware, async (req, res) => {
       LEFT JOIN jackpot_matches jm ON jm.id = s.match_id
       WHERE t.user_id = $1
       GROUP BY t.id
-      ORDER BY t.created_at DESC;
+      ORDER BY t.created_at DESC
     `;
     const { rows } = await pool.query(q, [userId]);
 
@@ -188,7 +197,7 @@ router.get("/tickets", authMiddleware, async (req, res) => {
       selections: r.selections
     }));
 
-    return res.json({ tickets });
+    res.json({ tickets });
   } catch (err) {
     console.error("❌ Error GET /api/jackpot/tickets:", err);
     res.status(500).json({ error: "Server error fetching tickets." });
