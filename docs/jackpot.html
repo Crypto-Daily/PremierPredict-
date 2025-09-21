@@ -102,16 +102,16 @@ async function loadRound(){
   roundMeta.textContent = `Prize pool: ₦${(Number(round.prize_pool_kobo)/100).toLocaleString()} — Status: ${round.status}`;
 
   matchesDiv.innerHTML = round.matches.map(m=>`
-    <div class="match">
+    <div class="match" data-match-id="${m.match_id}">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
         <div>
           <strong>${escapeHtml(m.home_team)}</strong> vs <strong>${escapeHtml(m.away_team)}</strong>
           <div class="muted">${new Date(m.match_time).toLocaleString()}</div>
         </div>
         <div class="options">
-          <label><input type="radio" name="m_${m.match_id}" value="home_win"> Home</label>
-          <label><input type="radio" name="m_${m.match_id}" value="draw"> Draw</label>
-          <label><input type="radio" name="m_${m.match_id}" value="away_win"> Away</label>
+          <label><input type="radio" name="m_${m.match_id}" value="H"> Home</label>
+          <label><input type="radio" name="m_${m.match_id}" value="D"> Draw</label>
+          <label><input type="radio" name="m_${m.match_id}" value="A"> Away</label>
         </div>
       </div>
     </div>
@@ -131,7 +131,7 @@ document.getElementById("submitBtn").addEventListener("click", async ()=>{
       alert("⚠️ Please pick a prediction for every match.");
       return;
     }
-    const matchId = Number(radios[0].name.split("_")[1]);
+    const matchId = Number(div.dataset.matchId);
     selections.push({ match_id: matchId, selection: chosen });
   }
 
