@@ -14,63 +14,22 @@
       --radius: 10px;
       --shadow: 0 6px 16px rgba(0,0,0,.08);
     }
-    body {
-      font-family: "Segoe UI", Arial, sans-serif;
-      background: var(--bg);
-      margin: 0;
-      padding: 0;
-      color: var(--text);
-    }
-    header {
-      background: var(--primary);
-      color: #fff;
-      padding: 1rem 2rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+    body { font-family: "Segoe UI", Arial, sans-serif; background: var(--bg); margin: 0; padding: 0; color: var(--text); }
+    header { background: var(--primary); color: #fff; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
     header h1 { margin: 0; font-size: 1.4rem; }
-    nav a {
-      color: #fff; margin-left: 1rem; text-decoration: none; font-weight: 500;
-    }
+    nav a { color: #fff; margin-left: 1rem; text-decoration: none; font-weight: 500; }
     nav a:hover { text-decoration: underline; }
-    .container {
-      max-width: 960px;
-      margin: 2rem auto;
-      padding: 1.5rem;
-      background: var(--card);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-    }
+    .container { max-width: 960px; margin: 2rem auto; padding: 1.5rem; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); }
     h2 { margin-top: 0; }
-    .match, .ticket {
-      border: 1px solid #eee;
-      padding: 1rem;
-      border-radius: var(--radius);
-      margin-bottom: 1rem;
-      background: #fafafa;
-    }
-    .match strong { font-size: .95rem; }
+    .match, .ticket { border: 1px solid #eee; padding: 1rem; border-radius: var(--radius); margin-bottom: 1rem; background: #fafafa; }
     .muted { color: var(--muted); font-size: .85rem; }
     .options label { margin-right: 12px; cursor: pointer; }
-    button {
-      background: var(--primary);
-      color: #fff;
-      border: none;
-      padding: .7rem 1.2rem;
-      border-radius: var(--radius);
-      font-size: 1rem;
-      cursor: pointer;
-      transition: 0.2s ease;
-    }
+    button { background: var(--primary); color: #fff; border: none; padding: .7rem 1.2rem; border-radius: var(--radius); font-size: 1rem; cursor: pointer; transition: 0.2s ease; }
     button:hover { background: #0063d1; }
     ul { padding-left: 1.2rem; margin: .5rem 0 0; }
     ul li { margin-bottom: .4rem; }
     hr { margin: 2rem 0; border: none; border-top: 1px solid #eee; }
-    @media(max-width:600px){
-      header, .container { padding: 1rem; }
-      nav a { margin-left: .5rem; font-size: .9rem; }
-    }
+    @media(max-width:600px){ header, .container { padding: 1rem; } nav a { margin-left: .5rem; font-size: .9rem; } }
   </style>
 </head>
 <body>
@@ -134,7 +93,6 @@ async function loadRound(){
 
   if(!r.ok || !r.body.matches){
     roundName.textContent = r.body.message || "No active round";
-    roundMeta.textContent = "";
     matchesDiv.innerHTML = "<p class='muted'>No matches to display</p>";
     return;
   }
@@ -174,7 +132,7 @@ document.getElementById("submitBtn").addEventListener("click", async ()=>{
       return;
     }
     const matchId = Number(radios[0].name.split("_")[1]);
-    selections.push({ match_id: matchId, prediction: chosen });
+    selections.push({ match_id: matchId, selection: chosen }); // ✅ use "selection" not "prediction"
   }
 
   if(selections.length !== 10){
