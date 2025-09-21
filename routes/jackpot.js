@@ -66,9 +66,9 @@ router.post("/bet", authMiddleware, async (req, res) => {
     }
 
     for (const s of selections) {
-      if (!s || !s.match_id || !s.prediction || !ALLOWED.has(s.prediction)) {
+      if (!s || !s.match_id || !s.selection || !ALLOWED.has(s.selection)) {
         return res.status(400).json({
-          error: "Each selection must be { match_id, prediction } with a valid prediction."
+          error: "Each selection must be { match_id, selection } with a valid selection."
         });
       }
     }
@@ -132,9 +132,9 @@ router.post("/bet", authMiddleware, async (req, res) => {
     // ticket
     const t = await client.query(
       `INSERT INTO jackpot_tickets (user_id, round_id, amount_kobo, stake_kobo, reference, status, created_at)
-       VALUES ($1, $2, $3, $3, $4, 'pending', NOW())
+       VALUES ($1, $2, $3, $4, $5, 'pending', NOW())
        RETURNING id`,
-      [userId, roundId, STAKE_KOBO, reference]
+      [userId, roundId, STAKE_KOBO, STAKE_KOBO, reference]
     );
     const ticketId = t.rows[0].id;
 
@@ -144,7 +144,7 @@ router.post("/bet", authMiddleware, async (req, res) => {
     let idx = 1;
     for (const s of selections) {
       placeholders.push(`($${idx++}, $${idx++}, $${idx++})`);
-      params.push(ticketId, s.match_id, s.prediction);
+      params.push(ticketId, s.match_id, s.selection);
     }
     await client.query(
       `INSERT INTO jackpot_ticket_selections (ticket_id, match_id, selection) VALUES ${placeholders.join(",")}`,
