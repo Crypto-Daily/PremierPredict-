@@ -4,12 +4,12 @@ import pool from "../db.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
-const STAKE_KOBO = 10000; // ₦100 stake
-const ALLOWED = new Set(["home_win", "draw", "away_win"]);
+const STAKE_KOBO = 10000; // ₦100 per ticket
+const ALLOWED = new Set(["H", "D", "A"]); // <-- make this consistent with DB
 
 /**
  * GET /api/jackpot
- * Fetch the current active jackpot round and its matches
+ * Fetch the active jackpot round and its matches
  */
 router.get("/", authMiddleware, async (req, res) => {
   try {
@@ -54,6 +54,7 @@ router.get("/", authMiddleware, async (req, res) => {
 
 /**
  * POST /api/jackpot/bet
+ * Place a new ticket
  */
 router.post("/bet", authMiddleware, async (req, res) => {
   const client = await pool.connect();
@@ -68,14 +69,14 @@ router.post("/bet", authMiddleware, async (req, res) => {
     for (const s of selections) {
       if (!s || !s.match_id || !s.selection || !ALLOWED.has(s.selection)) {
         return res.status(400).json({
-          error: "Each selection must be { match_id, selection } with a valid selection."
+          error: "Each selection must be { match_id, selection } with a valid value (H, D, A)."
         });
       }
     }
 
     await client.query("BEGIN");
 
-    // active round
+    // get active round
     const r = await client.query(
       `SELECT id FROM jackpot_rounds
        WHERE status = 'active'
@@ -115,13 +116,13 @@ router.post("/bet", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Insufficient balance." });
     }
 
-    // deduct
+    // deduct stake
     await client.query(
       "UPDATE wallets SET balance_kobo = balance_kobo - $1, updated_at = NOW() WHERE user_id = $2",
       [STAKE_KOBO, userId]
     );
 
-    // wallet txn
+    // wallet transaction
     const reference = `jackpot_${Date.now()}`;
     await client.query(
       `INSERT INTO wallet_txns (user_id, type, amount_kobo, reference, status, created_at)
@@ -129,7 +130,7 @@ router.post("/bet", authMiddleware, async (req, res) => {
       [userId, STAKE_KOBO, reference]
     );
 
-    // ticket
+    // create ticket
     const t = await client.query(
       `INSERT INTO jackpot_tickets (user_id, round_id, amount_kobo, stake_kobo, reference, status, created_at)
        VALUES ($1, $2, $3, $4, $5, 'pending', NOW())
@@ -138,7 +139,7 @@ router.post("/bet", authMiddleware, async (req, res) => {
     );
     const ticketId = t.rows[0].id;
 
-    // selections
+    // insert selections
     const placeholders = [];
     const params = [];
     let idx = 1;
@@ -165,6 +166,7 @@ router.post("/bet", authMiddleware, async (req, res) => {
 
 /**
  * GET /api/jackpot/tickets
+ * Fetch user's tickets
  */
 router.get("/tickets", authMiddleware, async (req, res) => {
   try {
