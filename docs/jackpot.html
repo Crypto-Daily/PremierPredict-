@@ -16,13 +16,13 @@
     }
     body { font-family: "Segoe UI", Arial, sans-serif; background: var(--bg); margin: 0; padding: 0; color: var(--text); }
     header { background: var(--primary); color: #fff; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
-    header h1 { margin: 0; font-size: 1.4rem; }
+    header h1 { margin: 0; font-size: 1.3rem; }
     nav a { color: #fff; margin-left: 1rem; text-decoration: none; font-weight: 500; }
     nav a:hover { text-decoration: underline; }
-    .container { max-width: 960px; margin: 2rem auto; padding: 1.5rem; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .container { max-width: 960px; margin: 1.5rem auto; padding: 1.5rem; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); }
     h2 { margin-top: 0; }
     .match, .ticket { border: 1px solid #eee; padding: 1rem; border-radius: var(--radius); margin-bottom: 1rem; background: #fafafa; }
-    .muted { color: var(--muted); font-size: .85rem; }
+    .muted { color: var(--muted); font-size: .9rem; }
     .options label { margin-right: 12px; cursor: pointer; }
     button { background: var(--primary); color: #fff; border: none; padding: .7rem 1.2rem; border-radius: var(--radius); font-size: 1rem; cursor: pointer; transition: 0.2s ease; }
     button:hover { background: #0063d1; }
@@ -43,6 +43,7 @@
   </header>
 
   <main class="container">
+    <!-- Active Round Section -->
     <section id="roundSection">
       <h2 id="roundName">Loading round…</h2>
       <p id="roundMeta" class="muted"></p>
@@ -53,6 +54,7 @@
 
     <hr>
 
+    <!-- Tickets Section -->
     <section>
       <h2>My Tickets</h2>
       <div id="ticketsArea">Loading tickets…</div>
@@ -61,16 +63,16 @@
 
 <script>
 const API = "/api/jackpot";
-const getToken = ()=> localStorage.getItem("token");
+const getToken = () => localStorage.getItem("token");
 
-// logout
-document.getElementById("logout").addEventListener("click", e=>{
+// Logout
+document.getElementById("logout").addEventListener("click", e => {
   e.preventDefault();
   localStorage.removeItem("token");
   location.href = "index.html";
 });
 
-// helper for API calls
+// Fetch helper
 async function fetchJSON(url, opts){
   const headers = opts?.headers || {};
   if(getToken()) headers.Authorization = `Bearer ${getToken()}`;
@@ -79,12 +81,12 @@ async function fetchJSON(url, opts){
   return { ok: res.ok, status: res.status, body: json };
 }
 
-// escape HTML
+// Escape HTML for safety
 function escapeHtml(s){ 
   return (s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); 
 }
 
-// load active round
+// Load Active Round
 async function loadRound(){
   const r = await fetchJSON(API, { method:"GET" });
   const roundName = document.getElementById("roundName");
@@ -93,7 +95,7 @@ async function loadRound(){
 
   if(!r.ok || !r.body.matches){
     roundName.textContent = r.body.message || "No active round";
-    matchesDiv.innerHTML = "<p class='muted'>No matches to display</p>";
+    matchesDiv.innerHTML = "<p class='muted'>No matches available</p>";
     return;
   }
 
@@ -118,7 +120,7 @@ async function loadRound(){
   `).join("");
 }
 
-// place ticket
+// Place Ticket
 document.getElementById("submitBtn").addEventListener("click", async ()=>{
   const matches = document.querySelectorAll(".match");
   const selections = [];
@@ -150,17 +152,17 @@ document.getElementById("submitBtn").addEventListener("click", async ()=>{
     alert("❌ Error: " + (body.error || JSON.stringify(body)));
     return;
   }
-  alert("✅ Ticket placed! Ref: " + (body.reference || body.ticketId));
+  alert("✅ Ticket placed! Ref: " + (body.reference || body.ticketId || ""));
   loadTickets();
 });
 
-// load user tickets
+// Load Tickets
 async function loadTickets(){
   const target = document.getElementById("ticketsArea");
   const { ok, body } = await fetchJSON(`${API}/tickets`, { method: "GET" });
 
   if(!ok){
-    target.innerHTML = "<p class='muted'>Could not load tickets. Try refreshing.</p>";
+    target.innerHTML = "<p class='muted'>Could not load tickets.</p>";
     return;
   }
   if(!body.tickets || body.tickets.length === 0){
@@ -188,7 +190,7 @@ async function loadTickets(){
   }).join("");
 }
 
-// init
+// Init
 (async ()=>{
   if(!getToken()){
     alert("Please login first.");
