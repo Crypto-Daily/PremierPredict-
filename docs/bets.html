@@ -1,1 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bets | PremierPredict</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen text-gray-800 pb-20">
+  <div class="container mx-auto px-4 py-6">
+    <!-- Header -->
+    <header class="flex justify-between items-center mb-4">
+      <h1 class="text-2xl font-bold text-blue-600 flex items-center space-x-2">
+        <i data-feather="activity" class="w-6 h-6"></i>
+        <span>My Bets</span>
+      </h1>
+      <div id="balanceBox" class="bg-blue-50 text-blue-600 font-semibold px-4 py-2 rounded-lg shadow">
+        ₦0.00
+      </div>
+    </header>
 
+    <!-- Active Tickets -->
+    <section class="wallet-card rounded-xl p-6 mb-6 shadow-md" data-aos="fade-up">
+      <h2 class="text-lg font-semibold mb-4">Active Tickets</h2>
+      <div id="activeTickets" class="text-gray-500">Loading...</div>
+    </section>
+
+    <!-- Ticket History -->
+    <section class="wallet-card rounded-xl p-6 shadow-md" data-aos="fade-up">
+      <h2 class="text-lg font-semibold mb-4">Ticket History</h2>
+      <div id="ticketHistory" class="text-gray-500">Loading...</div>
+    </section>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="dashboard.html" class="nav-btn"><i data-feather="home" class="w-5 h-5 mb-1"></i>Home</a>
+    <a href="bets.html" class="nav-btn active"><i data-feather="activity" class="w-5 h-5 mb-1"></i>Bets</a>
+    <a href="wallet.html" class="nav-btn"><i data-feather="credit-card" class="w-5 h-5 mb-1"></i>Wallet</a>
+    <a href="jackpot.html" class="nav-btn"><i data-feather="gift" class="w-5 h-5 mb-1"></i>Jackpot</a>
+    <a href="profile.html" class="nav-btn"><i data-feather="user" class="w-5 h-5 mb-1"></i>Profile</a>
+  </nav>
+
+  <script>
+    AOS.init();
+    feather.replace();
+
+    const API = "/api/jackpot";
+    const getToken = () => localStorage.getItem("token");
+    const formatMoney = (n) => "₦" + Number(n).toLocaleString("en-NG", { minimumFractionDigits: 2 });
+
+    async function loadBalance(){
+      const res = await fetch("/api/wallet/balance", { headers:{Authorization:"Bearer "+getToken()} });
+      const data = await res.json();
+      document.getElementById("balanceBox").innerText = formatMoney(data.balance||0);
+    }
+
+    async function loadActiveTickets(){
+      const res = await fetch(API+"/tickets", { headers:{Authorization:"Bearer "+getToken()} });
+      const body = await res.json();
+      const target=document.getElementById("activeTickets");
+      if(!body.tickets||!body.tickets.length){ target.innerHTML="<p>No active tickets</p>"; return; }
+      target.innerHTML=body.tickets.map(t=>`
+        <div class="border p-4 rounded-lg mb-3">
+          <b>Ticket #${t.id}</b> — Round ${t.round_id}
+          <ul class="text-sm mt-2">${t.selections.map(s=>`
+            <li>${s.match_id}: ${s.selection} → ${s.result||"pending"}</li>
+          `).join("")}</ul>
+        </div>
+      `).join("");
+    }
+
+    async function loadTicketHistory(){
+      const res = await fetch(API+"/history", { headers:{Authorization:"Bearer "+getToken()} });
+      const body = await res.json();
+      const target=document.getElementById("ticketHistory");
+      if(!body.tickets||!body.tickets.length){ target.innerHTML="<p>No ticket history</p>"; return; }
+      target.innerHTML=body.tickets.map(t=>`
+        <div class="border p-4 rounded-lg mb-3">
+          <b>Ticket #${t.id}</b> — Round ${t.round_id}
+          <span class="ml-2 ${t.status==='won'?'text-green-600':'text-red-600'} font-semibold">(${t.status})</span>
+          <ul class="text-sm mt-2">${t.selections.map(s=>`
+            <li>${s.match_id}: ${s.selection} → ${s.result||"pending"}</li>
+          `).join("")}</ul>
+        </div>
+      `).join("");
+    }
+
+    (async()=>{
+      if(!getToken()){ location.href="index.html"; return; }
+      await loadBalance();
+      await loadActiveTickets();
+      await loadTicketHistory();
+    })();
+  </script>
+</body>
+  </html>
