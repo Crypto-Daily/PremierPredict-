@@ -2,105 +2,114 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Jackpot | PremierPredict</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen text-gray-800 pb-20">
-  <div class="container mx-auto px-4 py-6">
-    <!-- Header -->
-    <header class="flex justify-between items-center mb-4">
-      <h1 class="text-2xl font-bold text-blue-600 flex items-center space-x-2">
-        <i data-feather="gift" class="w-6 h-6"></i>
-        <span>Jackpot</span>
-      </h1>
-      <div id="balanceBox" class="bg-blue-50 text-blue-600 font-semibold px-4 py-2 rounded-lg shadow">
-        ₦0.00
-      </div>
-    </header>
+  <!-- Header -->
+  <header class="flex justify-between items-center px-4 py-4 bg-blue-600 text-white">
+    <h1 class="text-xl font-bold">Jackpot</h1>
+    <div id="balanceBox" class="bg-white text-blue-600 px-3 py-1 rounded-lg shadow text-sm font-bold">₦0.00</div>
+  </header>
 
-    <!-- Prize Poster -->
-    <div class="wallet-card rounded-xl p-6 mb-6 shadow-md bg-gradient-to-r from-blue-600 to-indigo-600 text-white" data-aos="fade-up">
-      <h2 class="text-xl font-bold">This Week’s Jackpot</h2>
-      <p class="text-4xl font-extrabold mt-2">₦5,000,000</p>
-      <p class="text-sm mt-1 opacity-80">Predict 10 EPL matches correctly and win big!</p>
-    </div>
-
-    <!-- Active Round -->
-    <section id="round" class="wallet-card rounded-xl p-6 shadow-md" data-aos="fade-up">
-      <h2 id="roundName" class="text-lg font-semibold mb-4">Loading...</h2>
-      <div id="matches" class="space-y-4"></div>
-      <button id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium mt-6 transition">Place Ticket (₦100)</button>
-    </section>
+  <!-- Prize Poster -->
+  <div class="mx-4 my-4 rounded-lg overflow-hidden shadow-lg">
+    <img src="jackpot-poster.jpg" alt="Jackpot Prize" class="w-full">
   </div>
 
+  <!-- Active Round -->
+  <main class="container mx-auto px-4 py-6">
+    <h2 id="roundName" class="text-lg font-semibold mb-4">Loading...</h2>
+    <div id="matches" class="space-y-4"></div>
+    <button id="submitBtn" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition">Place Ticket (₦100)</button>
+  </main>
+
   <!-- Bottom Navigation -->
-  <nav class="bottom-nav">
-    <a href="dashboard.html" class="nav-btn"><i data-feather="home" class="w-5 h-5 mb-1"></i>Home</a>
-    <a href="bets.html" class="nav-btn"><i data-feather="activity" class="w-5 h-5 mb-1"></i>Bets</a>
-    <a href="wallet.html" class="nav-btn"><i data-feather="credit-card" class="w-5 h-5 mb-1"></i>Wallet</a>
-    <a href="jackpot.html" class="nav-btn active"><i data-feather="gift" class="w-5 h-5 mb-1"></i>Jackpot</a>
-    <a href="profile.html" class="nav-btn"><i data-feather="user" class="w-5 h-5 mb-1"></i>Profile</a>
+  <nav class="bottom-nav fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-2">
+    <a href="dashboard.html" class="nav-btn">
+      <i data-feather="home" class="w-5 h-5 mb-1"></i> Home
+    </a>
+    <a href="bets.html" class="nav-btn">
+      <i data-feather="activity" class="w-5 h-5 mb-1"></i> Bets
+    </a>
+    <a href="wallet.html" class="nav-btn">
+      <i data-feather="credit-card" class="w-5 h-5 mb-1"></i> Wallet
+    </a>
+    <a href="jackpot.html" class="nav-btn active text-blue-600">
+      <i data-feather="gift" class="w-5 h-5 mb-1"></i> Jackpot
+    </a>
+    <a href="profile.html" class="nav-btn">
+      <i data-feather="user" class="w-5 h-5 mb-1"></i> Profile
+    </a>
   </nav>
 
-  <script>
-    AOS.init();
-    feather.replace();
+  <!-- Spinner -->
+  <div id="spinner" class="fixed inset-0 bg-white bg-opacity-70 flex items-center justify-center hidden">
+    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+  </div>
 
+  <script>
+    feather.replace();
     const API = "/api/jackpot";
     const getToken = () => localStorage.getItem("token");
-    const formatMoney = (n) => "₦" + Number(n).toLocaleString("en-NG", { minimumFractionDigits: 2 });
+    const spinner = document.getElementById("spinner");
+    const showSpinner = () => spinner.classList.remove("hidden");
+    const hideSpinner = () => spinner.classList.add("hidden");
+
+    const formatMoney = (n) => "₦" + Number(n).toLocaleString("en-NG",{minimumFractionDigits:2});
 
     async function loadBalance(){
-      const res = await fetch("/api/wallet/balance", { headers:{Authorization:"Bearer "+getToken()} });
+      const res = await fetch("/api/wallet/balance",{ headers:{Authorization:"Bearer "+getToken()} });
       const data = await res.json();
       document.getElementById("balanceBox").innerText = formatMoney(data.balance||0);
     }
 
     async function loadRound(){
-      document.getElementById("matches").innerHTML = "<p class='text-center text-gray-500'>Loading...</p>";
-      const res = await fetch(API, { headers:{Authorization:"Bearer "+getToken()} });
+      showSpinner();
+      const res = await fetch(API,{ headers:{Authorization:"Bearer "+getToken()} });
       const body = await res.json();
+      hideSpinner();
+
       if(!body.matches){
         document.getElementById("roundName").innerText = "No active round";
-        document.getElementById("matches").innerHTML = "";
         return;
       }
-      document.getElementById("roundName").innerText = body.name;
-
-      document.getElementById("matches").innerHTML = body.matches.map(m => `
-        <div class="border rounded-lg p-4">
-          <div class="font-semibold mb-2">${m.home_team} vs ${m.away_team}</div>
-          <div class="grid grid-cols-3 gap-2">
-            <button class="optionBtn px-3 py-2 rounded-lg border text-center" data-match="${m.match_id}" data-value="H">Home</button>
-            <button class="optionBtn px-3 py-2 rounded-lg border text-center" data-match="${m.match_id}" data-value="D">Draw</button>
-            <button class="optionBtn px-3 py-2 rounded-lg border text-center" data-match="${m.match_id}" data-value="A">Away</button>
+      document.getElementById("roundName").innerText = body.name + " (Round "+body.id+")";
+      document.getElementById("matches").innerHTML = body.matches.map(m=>`
+        <div class="p-4 border rounded bg-white shadow">
+          <b>${m.home_team}</b> vs <b>${m.away_team}</b>
+          <div class="flex space-x-2 mt-2">
+            <label class="flex-1">
+              <input type="radio" name="m_${m.match_id}" value="H" class="hidden peer">
+              <div class="peer-checked:bg-blue-600 peer-checked:text-white text-center py-2 border rounded cursor-pointer">Home</div>
+            </label>
+            <label class="flex-1">
+              <input type="radio" name="m_${m.match_id}" value="D" class="hidden peer">
+              <div class="peer-checked:bg-blue-600 peer-checked:text-white text-center py-2 border rounded cursor-pointer">Draw</div>
+            </label>
+            <label class="flex-1">
+              <input type="radio" name="m_${m.match_id}" value="A" class="hidden peer">
+              <div class="peer-checked:bg-blue-600 peer-checked:text-white text-center py-2 border rounded cursor-pointer">Away</div>
+            </label>
           </div>
         </div>
       `).join("");
-
-      document.querySelectorAll(".optionBtn").forEach(btn=>{
-        btn.addEventListener("click", e=>{
-          const group = document.querySelectorAll(`[data-match="${btn.dataset.match}"]`);
-          group.forEach(b=>b.classList.remove("bg-blue-600","text-white"));
-          btn.classList.add("bg-blue-600","text-white");
-        });
-      });
     }
 
-    document.getElementById("submitBtn").addEventListener("click", async ()=>{
+    document.getElementById("submitBtn").onclick = async()=>{
       const selections=[];
-      document.querySelectorAll(".optionBtn.bg-blue-600").forEach(b=>{
-        selections.push({match_id:Number(b.dataset.match),selection:b.dataset.value});
+      document.querySelectorAll("[name^='m_']").forEach(inp=>{
+        if(inp.checked) selections.push({match_id:Number(inp.name.split("_")[1]),selection:inp.value});
       });
-      if(selections.length!==10) return alert("Please select all 10 matches.");
-      const res=await fetch(API+"/bet",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+getToken()},body:JSON.stringify({selections})});
-      const body=await res.json();
-      if(res.ok) alert("✅ Ticket placed!"); else alert("❌ "+(body.error||"Error"));
-    });
+      if(selections.length!==10){ alert("Please select all 10 predictions."); return; }
+      showSpinner();
+      const res = await fetch(API+"/bet",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+getToken()},body:JSON.stringify({selections})});
+      const data = await res.json();
+      hideSpinner();
+      if(res.ok){ alert("✅ Ticket placed!"); } else { alert("❌ "+(data.error||"Error")); }
+    }
 
     (async()=>{
       if(!getToken()){ location.href="index.html"; return; }
