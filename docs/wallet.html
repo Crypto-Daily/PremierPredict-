@@ -3,56 +3,72 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wallet | Jackpot</title>
+  <title>Wallet | PremierPredict</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-  <script src="https://unpkg.com/feather-icons"></script>
   <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
   <style>
     .wallet-card {
-      background: rgba(249, 250, 251, 0.9);
-      border: 1px solid rgba(209, 213, 219, 0.5);
+      background: #ffffff;
+      border: 1px solid rgba(229, 231, 235, 0.8);
     }
     .input-field {
-      background: rgba(249, 250, 251, 0.9);
-      border: 1px solid rgba(209, 213, 219, 0.7);
+      background: #f9fafb;
+      border: 1px solid #d1d5db;
     }
     .input-field:focus {
       outline: none;
-      border-color: rgba(99, 102, 241, 0.8);
+      border-color: #2563eb; /* blue focus */
+    }
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #ffffff;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-around;
+      padding: 0.6rem 0;
+      z-index: 50;
+    }
+    .nav-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 0.75rem;
+      color: #6b7280;
+      transition: all 0.2s;
+    }
+    .nav-btn.active,
+    .nav-btn:hover {
+      color: #2563eb; /* blue active */
     }
   </style>
 </head>
-<body class="bg-white min-h-screen text-gray-800">
-  <div class="container mx-auto px-4 py-8">
+<body class="bg-gray-50 min-h-screen text-gray-800 pb-20">
+  <div class="container mx-auto px-4 py-6">
     <!-- Header -->
-    <header class="flex justify-between items-center mb-8">
+    <header class="flex justify-between items-center mb-6">
       <div class="flex items-center space-x-2">
-        <i data-feather="dollar-sign" class="w-6 h-6"></i>
-        <h1 class="text-2xl font-bold">PremierPredict</h1>
+        <i data-feather="dollar-sign" class="w-6 h-6 text-blue-600"></i>
+        <h1 class="text-2xl font-bold text-blue-600">PremierPredict</h1>
       </div>
+      <button id="logoutBtn" class="text-sm text-red-500 hover:underline">Logout</button>
     </header>
-      <h2 class="flex justify-between items-center mb-8"> 
-        <a href="dashboard.html" class="hover:text-indigo-600 transition">Dashboard</a>
-        <a href="wallet.html" class="hover:text-indigo-600 transition">Wallet</a>
-        <a href="jackpot.html" class="hover:text-indigo-600 transition">Jackpot</a>
-        <a href="#" id="logoutBtn" class="hover:text-red-500 transition">Logout</a>
-      </nav>
-      </h2>
-    
 
     <!-- Balance Card -->
-    <div class="wallet-card rounded-xl p-6 mb-8 shadow-lg" data-aos="fade-up">
+    <div class="wallet-card rounded-xl p-6 mb-6 shadow-md" data-aos="fade-up">
       <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-semibold">Your Balance</h2>
-        <i data-feather="eye" class="w-5 h-5 cursor-pointer hover:text-indigo-600"></i>
+        <h2 class="text-lg font-semibold">Your Balance</h2>
+        <i data-feather="eye" class="w-5 h-5 cursor-pointer text-gray-500 hover:text-blue-600"></i>
       </div>
-      <div class="text-4xl font-bold mb-2" id="balance">₦0.00</div>
+      <div class="text-4xl font-bold text-blue-600 mb-2" id="balance">₦0.00</div>
     </div>
 
     <!-- Deposit Section -->
-    <div class="wallet-card rounded-xl p-6 mb-6" data-aos="fade-up">
+    <div class="wallet-card rounded-xl p-6 mb-6 shadow-md" data-aos="fade-up">
       <h3 class="text-lg font-semibold mb-4">Deposit Funds</h3>
       <div class="mb-4">
         <label class="block text-sm font-medium mb-2">Custom Amount</label>
@@ -61,11 +77,11 @@
           <input type="number" id="depositAmount" class="input-field w-full pl-8 py-3 rounded-lg" placeholder="Enter amount (₦)" min="100">
         </div>
       </div>
-      <button id="depositBtn" class="w-full bg-green-500 hover:bg-green-600 py-3 rounded-lg font-medium transition">Deposit with Paystack</button>
+      <button id="depositBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition">Deposit with Paystack</button>
     </div>
 
     <!-- Withdraw Section -->
-    <div class="wallet-card rounded-xl p-6" data-aos="fade-up">
+    <div class="wallet-card rounded-xl p-6 shadow-md" data-aos="fade-up">
       <h3 class="text-lg font-semibold mb-4">Withdraw Funds</h3>
       <div class="mb-4">
         <label class="block text-sm font-medium mb-2">Amount</label>
@@ -74,139 +90,152 @@
           <input type="number" id="withdrawAmount" class="input-field w-full pl-8 py-3 rounded-lg" placeholder="Enter amount (₦)" min="100">
         </div>
       </div>
-      <button id="withdrawBtn" class="w-full bg-blue-500 hover:bg-blue-600 py-3 rounded-lg font-medium transition">Withdraw</button>
+      <button id="withdrawBtn" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg font-medium transition">Withdraw</button>
     </div>
   </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="dashboard.html" class="nav-btn active">
+      <i data-feather="home" class="w-5 h-5 mb-1"></i>
+      Home
+    </a>
+    <a href="bets.html" class="nav-btn">
+      <i data-feather="activity" class="w-5 h-5 mb-1"></i>
+      Bets
+    </a>
+    <a href="wallet.html" class="nav-btn">
+      <i data-feather="credit-card" class="w-5 h-5 mb-1"></i>
+      Wallet
+    </a>
+    <a href="jackpot.html" class="nav-btn">
+      <i data-feather="gift" class="w-5 h-5 mb-1"></i>
+      Jackpot
+    </a>
+    <a href="profile.html" class="nav-btn">
+      <i data-feather="user" class="w-5 h-5 mb-1"></i>
+      Profile
+    </a>
+  </nav>
 
   <script>
     AOS.init();
     feather.replace();
-  </script>
 
-  <script>
     const API_URL = "https://premierpredict.onrender.com/api";  
-
     const getToken = () => localStorage.getItem("token");  
-    const logout = () => {  
-      localStorage.removeItem("token");  
-      window.location.href = "index.html";  
-    };  
-    document.getElementById("logoutBtn").addEventListener("click", logout);  
 
-    const formatMoney = (amount) =>  
-      "₦" + Number(amount).toLocaleString("en-NG", { minimumFractionDigits: 2 });  
+    const logout = () => {
+      localStorage.removeItem("token");
+      window.location.href = "index.html";
+    };
+    document.getElementById("logoutBtn").addEventListener("click", logout);
 
-    // ✅ Load wallet balance  
-    async function loadWallet() {  
-      const token = getToken();  
-      if (!token) {  
-        alert("⚠ Please login first.");  
-        window.location.href = "index.html";  
-        return;  
-      }  
-      try {  
-        const res = await fetch(`${API_URL}/wallet/balance`, {  
-          headers: { Authorization: `Bearer ${token}` },  
-        });  
-        const data = await res.json();  
-        document.getElementById("balance").innerText = formatMoney(data.balance || 0);  
-      } catch (err) {  
-        console.error(err);  
-        alert("❌ Error fetching wallet data");  
-      }  
-    }  
+    const formatMoney = (amount) => "₦" + Number(amount).toLocaleString("en-NG", { minimumFractionDigits: 2 });
 
-    // ✅ Deposit with Paystack  
-    async function depositFunds() {  
-      const token = getToken();  
-      const amount = parseFloat(document.getElementById("depositAmount").value);  
-      if (!amount || amount <= 0) return alert("Enter a valid amount");  
+    async function loadWallet() {
+      const token = getToken();
+      if (!token) {
+        alert("⚠ Please login first.");
+        window.location.href = "index.html";
+        return;
+      }
+      try {
+        const res = await fetch(`${API_URL}/wallet/balance`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        document.getElementById("balance").innerText = formatMoney(data.balance || 0);
+      } catch (err) {
+        console.error(err);
+        alert("❌ Error fetching wallet data");
+      }
+    }
 
-      try {  
-        const res = await fetch(`${API_URL}/wallet/deposit/initiate`, {  
-          method: "POST",  
-          headers: {  
-            "Content-Type": "application/json",  
-            Authorization: `Bearer ${token}`  
-          },  
-          body: JSON.stringify({ amount }),  
-        });  
+    async function depositFunds() {
+      const token = getToken();
+      const amount = parseFloat(document.getElementById("depositAmount").value);
+      if (!amount || amount <= 0) return alert("Enter a valid amount");
 
-        const data = await res.json();  
-        if (data.authorizationUrl) {  
-          window.location.href = data.authorizationUrl; // redirect to Paystack  
-        } else {  
-          alert("❌ Deposit initiation failed");  
-        }  
-      } catch (err) {  
-        console.error(err);  
-        alert("❌ Error connecting to server");  
-      }  
-    }  
+      try {
+        const res = await fetch(`${API_URL}/wallet/deposit/initiate`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ amount }),
+        });
 
-    // ✅ Withdraw funds  
-    async function withdrawFunds() {  
-      const token = getToken();  
-      const amount = parseFloat(document.getElementById("withdrawAmount").value);  
-      if (!amount || amount <= 0) return alert("Enter a valid amount");  
+        const data = await res.json();
+        if (data.authorizationUrl) {
+          window.location.href = data.authorizationUrl;
+        } else {
+          alert("❌ Deposit initiation failed");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("❌ Error connecting to server");
+      }
+    }
 
-      try {  
-        const res = await fetch(`${API_URL}/wallet/withdraw`, {  
-          method: "POST",  
-          headers: {  
-            "Content-Type": "application/json",  
-            Authorization: `Bearer ${token}`  
-          },  
-          body: JSON.stringify({ amount }),  
-        });  
+    async function withdrawFunds() {
+      const token = getToken();
+      const amount = parseFloat(document.getElementById("withdrawAmount").value);
+      if (!amount || amount <= 0) return alert("Enter a valid amount");
 
-        const data = await res.json();  
-        if (data.balance !== undefined) {  
-          alert("✅ Withdrawal successful!");  
-          loadWallet();  
-        } else {  
-          alert("❌ Withdrawal failed: " + (data.error || "try again"));  
-        }  
-      } catch (err) {  
-        console.error(err);  
-        alert("❌ Error connecting to server");  
-      }  
-    }  
+      try {
+        const res = await fetch(`${API_URL}/wallet/withdraw`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ amount }),
+        });
 
-    // ✅ Handle Paystack redirect (verify deposit)  
-    const urlParams = new URLSearchParams(window.location.search);  
-    const reference = urlParams.get("reference");  
-    if (reference) {  
-      (async () => {  
-        const token = getToken();  
-        try {  
-          const res = await fetch(`${API_URL}/wallet/deposit/verify/${reference}`, {  
-            method: "GET",  
-            headers: {  
-              Authorization: `Bearer ${token}`  
-            }  
-          });  
-          const data = await res.json();  
-          if (data.success) {  
-            alert("✅ Deposit verified and balance updated!");  
-            loadWallet();  
-          } else {  
-            alert("❌ Payment verification failed: " + (data.message || "Unknown error"));  
-          }  
+        const data = await res.json();
+        if (data.balance !== undefined) {
+          alert("✅ Withdrawal successful!");
+          loadWallet();
+        } else {
+          alert("❌ Withdrawal failed: " + (data.error || "try again"));
+        }
+      } catch (err) {
+        console.error(err);
+        alert("❌ Error connecting to server");
+      }
+    }
 
-          // Clean the URL so reference= is removed  
-          window.history.replaceState({}, document.title, "wallet.html");  
-        } catch (err) {  
-          console.error(err);  
-          alert("❌ Error verifying payment");  
-        }  
-      })();  
-    }  
+    const urlParams = new URLSearchParams(window.location.search);
+    const reference = urlParams.get("reference");
+    if (reference) {
+      (async () => {
+        const token = getToken();
+        try {
+          const res = await fetch(`${API_URL}/wallet/deposit/verify/${reference}`, {
+            method: "GET",
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (data.success) {
+            alert("✅ Deposit verified and balance updated!");
+            loadWallet();
+          } else {
+            alert("❌ Payment verification failed: " + (data.message || "Unknown error"));
+          }
+          window.history.replaceState({}, document.title, "wallet.html");
+        } catch (err) {
+          console.error(err);
+          alert("❌ Error verifying payment");
+        }
+      })();
+    }
 
-    document.getElementById("depositBtn").addEventListener("click", depositFunds);  
-    document.getElementById("withdrawBtn").addEventListener("click", withdrawFunds);  
+    document.getElementById("depositBtn").addEventListener("click", depositFunds);
+    document.getElementById("withdrawBtn").addEventListener("click", withdrawFunds);
 
-    loadWallet();  
+    loadWallet();
   </script>
 </body>
-  </html>
+</html>
