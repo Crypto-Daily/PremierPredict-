@@ -1,130 +1,222 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Jackpot — PremierPredict</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jackpot | PremierPredict</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; background: #f5f7fb; margin: 0; }
-    header { background: #007bff; color: #fff; padding: 1rem; display:flex; justify-content:space-between; }
-    .container { max-width: 800px; margin: 1.5rem auto; padding: 1rem; background: #fff; border-radius: 10px; }
-    .match { border:1px solid #ddd; padding:1rem; margin:1rem 0; border-radius: 6px; }
-    .options label { margin-right: 10px; }
-    button { background: #007bff; color:#fff; padding:0.6rem 1.2rem; border:none; border-radius:6px; cursor:pointer; }
-    button:hover { background:#005fcc; }
+    .wallet-card {
+      background: #ffffff;
+      border: 1px solid rgba(229, 231, 235, 0.8);
+    }
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #ffffff;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-around;
+      padding: 0.6rem 0;
+      z-index: 50;
+    }
+    .nav-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 0.75rem;
+      color: #6b7280;
+      transition: all 0.2s;
+    }
+    .nav-btn.active,
+    .nav-btn:hover {
+      color: #2563eb;
+    }
   </style>
 </head>
-<body>
-  <header>
-    <h1>PremierPredict Jackpot</h1>
-    <a href="#" id="logout" style="color:#fff;">Logout</a>
-  </header>
-
-  <main class="container">
-    <section id="round">
-      <h2 id="roundName">Loading...</h2>
-      <div id="matches"></div>
-      <button id="submitBtn">Place Ticket (₦100)</button>
-    </section>
-
-    <hr>
-
-    <section>
-      <h2>My Tickets</h2>
-      <div id="tickets"></div>
-    </section>
-  </main>
-
-<script>
-const API = "/api/jackpot";
-const getToken = () => localStorage.getItem("token");
-
-document.getElementById("logout").onclick = e => {
-  e.preventDefault();
-  localStorage.removeItem("token");
-  location.href = "index.html";
-};
-
-// fetch helper
-async function fetchJSON(url, opts){
-  const headers = opts?.headers || {};
-  if(getToken()) headers.Authorization = "Bearer " + getToken();
-  const res = await fetch(url, { ...opts, headers });
-  return { ok: res.ok, body: await res.json().catch(()=>({})) };
-}
-
-// load active round
-async function loadRound(){
-  const { ok, body } = await fetchJSON(API);
-  const matchesDiv = document.getElementById("matches");
-  if(!ok || !body.matches){
-    document.getElementById("roundName").textContent = "No active round";
-    matchesDiv.innerHTML = "";
-    return;
-  }
-  document.getElementById("roundName").textContent = body.name + " (Round " + body.id + ")";
-  matchesDiv.innerHTML = body.matches.map(m => `
-    <div class="match" data-match-id="${m.match_id}">
-      <b>${m.home_team}</b> vs <b>${m.away_team}</b>
-      <div>
-        <label><input type="radio" name="m_${m.match_id}" value="H"> Home</label>
-        <label><input type="radio" name="m_${m.match_id}" value="D"> Draw</label>
-        <label><input type="radio" name="m_${m.match_id}" value="A"> Away</label>
+<body class="bg-gray-50 min-h-screen text-gray-800 pb-20">
+  <div class="container mx-auto px-4 py-6">
+    <!-- Header -->
+    <header class="flex justify-between items-center mb-6">
+      <div class="flex items-center space-x-2">
+        <i data-feather="gift" class="w-6 h-6 text-blue-600"></i>
+        <h1 class="text-2xl font-bold text-blue-600">Jackpot</h1>
       </div>
+      <button id="logoutBtn" class="text-sm text-red-500 hover:underline">Logout</button>
+    </header>
+
+    <!-- Balance Card -->
+    <div class="wallet-card rounded-xl p-6 mb-6 shadow-md" data-aos="fade-up">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold">Your Balance</h2>
+        <i data-feather="eye" class="w-5 h-5 cursor-pointer text-gray-500 hover:text-blue-600"></i>
+      </div>
+      <div class="text-4xl font-bold text-blue-600 mb-2" id="balance">₦0.00</div>
     </div>
-  `).join("");
-}
 
-// submit bet
-document.getElementById("submitBtn").onclick = async () => {
-  const selections = [];
-  document.querySelectorAll(".match").forEach(div => {
-    const matchId = Number(div.dataset.matchId);
-    const choice = div.querySelector("input:checked");
-    if(choice) selections.push({ match_id: matchId, selection: choice.value });
-  });
-  if(selections.length !== 10){
-    alert("Please select all 10 predictions.");
-    return;
-  }
-  const { ok, body } = await fetchJSON(API+"/bet", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ selections })
-  });
-  if(ok){
-    alert("✅ Ticket placed!");
-    loadTickets();
-  } else {
-    alert("❌ " + (body.error || "Error"));
-  }
-};
-
-// load tickets
-async function loadTickets(){
-  const { ok, body } = await fetchJSON(API+"/tickets");
-  const target = document.getElementById("tickets");
-  if(!ok || !body.tickets) return target.innerHTML = "<p>No tickets</p>";
-  target.innerHTML = body.tickets.map(t => `
-    <div class="ticket">
-      <b>Ticket #${t.id}</b> — Round ${t.round_id} (${new Date(t.created_at).toLocaleString()})
-      <ul>
-        ${t.selections.map(s => `<li>Match ${s.match_id}: ${s.selection} → ${s.result || "pending"}</li>`).join("")}
-      </ul>
+    <!-- Active Jackpot Round -->
+    <div class="wallet-card rounded-xl p-6 mb-6 shadow-md" data-aos="fade-up">
+      <h3 class="text-lg font-semibold mb-4" id="roundName">Loading round...</h3>
+      <div id="matches"></div>
+      <button id="submitBtn" class="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition">
+        Place Ticket (₦100)
+      </button>
     </div>
-  `).join("");
-}
 
-// init
-(async ()=>{
-  if(!getToken()){
-    alert("Login first.");
-    location.href = "index.html";
-    return;
-  }
-  await loadRound();
-  await loadTickets();
-})();
-</script>
+    <!-- My Tickets -->
+    <div class="wallet-card rounded-xl p-6 shadow-md" data-aos="fade-up">
+      <h3 class="text-lg font-semibold mb-4">My Tickets</h3>
+      <div id="tickets"></div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="dashboard.html" class="nav-btn">
+      <i data-feather="home" class="w-5 h-5 mb-1"></i>
+      Home
+    </a>
+    <a href="bets.html" class="nav-btn">
+      <i data-feather="activity" class="w-5 h-5 mb-1"></i>
+      Bets
+    </a>
+    <a href="wallet.html" class="nav-btn">
+      <i data-feather="credit-card" class="w-5 h-5 mb-1"></i>
+      Wallet
+    </a>
+    <a href="jackpot.html" class="nav-btn active">
+      <i data-feather="gift" class="w-5 h-5 mb-1"></i>
+      Jackpot
+    </a>
+    <a href="profile.html" class="nav-btn">
+      <i data-feather="user" class="w-5 h-5 mb-1"></i>
+      Profile
+    </a>
+  </nav>
+
+  <script>
+    AOS.init();
+    feather.replace();
+
+    const API_URL = "https://premierpredict.onrender.com/api";  
+    const getToken = () => localStorage.getItem("token");  
+
+    const logout = () => {
+      localStorage.removeItem("token");
+      window.location.href = "index.html";
+    };
+    document.getElementById("logoutBtn").addEventListener("click", logout);
+
+    const formatMoney = (amount) => "₦" + Number(amount).toLocaleString("en-NG", { minimumFractionDigits: 2 });
+
+    // Load wallet balance
+    async function loadWallet() {
+      const token = getToken();
+      if (!token) return;
+      try {
+        const res = await fetch(`${API_URL}/wallet/balance`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        document.getElementById("balance").innerText = formatMoney(data.balance || 0);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // Jackpot APIs
+    const JACKPOT_API = `${API_URL}/jackpot`;
+
+    async function fetchJSON(url, opts={}) {
+      const headers = opts.headers || {};
+      if (getToken()) headers.Authorization = "Bearer " + getToken();
+      const res = await fetch(url, { ...opts, headers });
+      return { ok: res.ok, body: await res.json().catch(()=>({})) };
+    }
+
+    // Load active round
+    async function loadRound() {
+      const { ok, body } = await fetchJSON(JACKPOT_API);
+      const matchesDiv = document.getElementById("matches");
+      if (!ok || !body.matches) {
+        document.getElementById("roundName").textContent = "No active round";
+        matchesDiv.innerHTML = "";
+        return;
+      }
+      document.getElementById("roundName").textContent = `${body.name} (Round ${body.id})`;
+      matchesDiv.innerHTML = body.matches.map(m => `
+        <div class="border rounded-lg p-4 mb-3" data-match-id="${m.match_id}">
+          <div class="font-medium mb-2">${m.home_team} vs ${m.away_team}</div>
+          <div class="flex space-x-4">
+            <label><input type="radio" name="m_${m.match_id}" value="home"> Home</label>
+            <label><input type="radio" name="m_${m.match_id}" value="draw"> Draw</label>
+            <label><input type="radio" name="m_${m.match_id}" value="away"> Away</label>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    // Submit ticket
+    document.getElementById("submitBtn").onclick = async () => {
+      const selections = [];
+      document.querySelectorAll("[data-match-id]").forEach(div => {
+        const matchId = Number(div.dataset.matchId);
+        const choice = div.querySelector("input:checked");
+        if (choice) selections.push({ match_id: matchId, selection: choice.value });
+      });
+      if (selections.length !== 10) {
+        alert("⚠ Please select all 10 predictions.");
+        return;
+      }
+      const { ok, body } = await fetchJSON(`${JACKPOT_API}/bet`, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ selections })
+      });
+      if (ok) {
+        alert("✅ Ticket placed!");
+        loadTickets();
+        loadWallet();
+      } else {
+        alert("❌ " + (body.error || "Error placing ticket"));
+      }
+    };
+
+    // Load ticket history
+    async function loadTickets() {
+      const { ok, body } = await fetchJSON(`${JACKPOT_API}/tickets`);
+      const target = document.getElementById("tickets");
+      if (!ok || !body.tickets) {
+        target.innerHTML = "<p>No tickets yet</p>";
+        return;
+      }
+      target.innerHTML = body.tickets.map(t => `
+        <div class="border rounded-lg p-4 mb-3">
+          <div class="font-medium">Ticket #${t.id} — Round ${t.round_id}</div>
+          <div class="text-sm text-gray-500 mb-2">${new Date(t.created_at).toLocaleString()}</div>
+          <ul class="text-sm list-disc pl-5">
+            ${t.selections.map(s => `<li>${s.match_id}: ${s.selection} → ${s.result || "pending"}</li>`).join("")}
+          </ul>
+        </div>
+      `).join("");
+    }
+
+    // Init
+    (async () => {
+      if (!getToken()) {
+        alert("⚠ Please login first.");
+        window.location.href = "index.html";
+        return;
+      }
+      await loadWallet();
+      await loadRound();
+      await loadTickets();
+    })();
+  </script>
 </body>
-</html>
+  </html>
