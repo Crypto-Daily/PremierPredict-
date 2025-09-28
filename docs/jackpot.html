@@ -3,176 +3,110 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bets - PremierPredict</title>
-  <link rel="stylesheet" href="styles.css"> <!-- Reuse wallet styles -->
-  <style>
-    body {
-      background: #f5f5f5;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-    }
-
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1rem;
-      background: #fff;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-
-    header h1 {
-      font-size: 1.2rem;
-      color: #007bff;
-    }
-
-    .balance {
-      font-size: 1rem;
-      font-weight: bold;
-      background: #007bff;
-      color: white;
-      padding: 6px 12px;
-      border-radius: 10px;
-    }
-
-    .container {
-      padding: 1rem;
-    }
-
-    h2 {
-      margin-top: 20px;
-      color: #333;
-      border-bottom: 2px solid #007bff;
-      padding-bottom: 5px;
-    }
-
-    .ticket {
-      background: #fff;
-      border-radius: 12px;
-      padding: 12px;
-      margin: 10px 0;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .ticket.won {
-      border-left: 5px solid #28a745;
-    }
-
-    .ticket.lost {
-      border-left: 5px solid #dc3545;
-    }
-
-    .loading {
-      text-align: center;
-      margin: 20px 0;
-      display: none;
-    }
-
-    .spinner {
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid #007bff;
-      border-radius: 50%;
-      width: 36px;
-      height: 36px;
-      animation: spin 1s linear infinite;
-      margin: auto;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  </style>
+  <title>Jackpot | PremierPredict</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
 </head>
-<body>
-  <header>
-    <h1>My Bets</h1>
-    <div class="balance" id="balanceBox">₦0.00</div>
-  </header>
+<body class="bg-gray-50 min-h-screen text-gray-800 pb-20">
+  <div class="container mx-auto px-4 py-6">
+    <!-- Header -->
+    <header class="flex justify-between items-center mb-4">
+      <h1 class="text-2xl font-bold text-blue-600 flex items-center space-x-2">
+        <i data-feather="gift" class="w-6 h-6"></i>
+        <span>Jackpot</span>
+      </h1>
+      <div id="balanceBox" class="bg-blue-50 text-blue-600 font-semibold px-4 py-2 rounded-lg shadow">
+        ₦0.00
+      </div>
+    </header>
 
-  <div class="container">
-    <h2>Active Tickets</h2>
-    <div class="loading" id="activeLoading"><div class="spinner"></div></div>
-    <div id="activeTickets"></div>
+    <!-- Prize Poster -->
+    <div class="wallet-card rounded-xl p-6 mb-6 shadow-md bg-gradient-to-r from-blue-600 to-indigo-600 text-white" data-aos="fade-up">
+      <h2 class="text-xl font-bold">This Week’s Jackpot</h2>
+      <p class="text-4xl font-extrabold mt-2">₦5,000,000</p>
+      <p class="text-sm mt-1 opacity-80">Predict 10 EPL matches correctly and win big!</p>
+    </div>
 
-    <h2>Ticket History</h2>
-    <div class="loading" id="historyLoading"><div class="spinner"></div></div>
-    <div id="ticketHistory"></div>
+    <!-- Active Round -->
+    <section id="round" class="wallet-card rounded-xl p-6 shadow-md" data-aos="fade-up">
+      <h2 id="roundName" class="text-lg font-semibold mb-4">Loading...</h2>
+      <div id="matches" class="space-y-4"></div>
+      <button id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium mt-6 transition">Place Ticket (₦100)</button>
+    </section>
   </div>
 
-  <script src="jackpot.js"></script>
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="dashboard.html" class="nav-btn"><i data-feather="home" class="w-5 h-5 mb-1"></i>Home</a>
+    <a href="bets.html" class="nav-btn"><i data-feather="activity" class="w-5 h-5 mb-1"></i>Bets</a>
+    <a href="wallet.html" class="nav-btn"><i data-feather="credit-card" class="w-5 h-5 mb-1"></i>Wallet</a>
+    <a href="jackpot.html" class="nav-btn active"><i data-feather="gift" class="w-5 h-5 mb-1"></i>Jackpot</a>
+    <a href="profile.html" class="nav-btn"><i data-feather="user" class="w-5 h-5 mb-1"></i>Profile</a>
+  </nav>
+
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      loadBalance();
-      loadActiveTickets();
-      loadTicketHistory();
+    AOS.init();
+    feather.replace();
+
+    const API = "/api/jackpot";
+    const getToken = () => localStorage.getItem("token");
+    const formatMoney = (n) => "₦" + Number(n).toLocaleString("en-NG", { minimumFractionDigits: 2 });
+
+    async function loadBalance(){
+      const res = await fetch("/api/wallet/balance", { headers:{Authorization:"Bearer "+getToken()} });
+      const data = await res.json();
+      document.getElementById("balanceBox").innerText = formatMoney(data.balance||0);
+    }
+
+    async function loadRound(){
+      document.getElementById("matches").innerHTML = "<p class='text-center text-gray-500'>Loading...</p>";
+      const res = await fetch(API, { headers:{Authorization:"Bearer "+getToken()} });
+      const body = await res.json();
+      if(!body.matches){
+        document.getElementById("roundName").innerText = "No active round";
+        document.getElementById("matches").innerHTML = "";
+        return;
+      }
+      document.getElementById("roundName").innerText = body.name;
+
+      document.getElementById("matches").innerHTML = body.matches.map(m => `
+        <div class="border rounded-lg p-4">
+          <div class="font-semibold mb-2">${m.home_team} vs ${m.away_team}</div>
+          <div class="grid grid-cols-3 gap-2">
+            <button class="optionBtn px-3 py-2 rounded-lg border text-center" data-match="${m.match_id}" data-value="H">Home</button>
+            <button class="optionBtn px-3 py-2 rounded-lg border text-center" data-match="${m.match_id}" data-value="D">Draw</button>
+            <button class="optionBtn px-3 py-2 rounded-lg border text-center" data-match="${m.match_id}" data-value="A">Away</button>
+          </div>
+        </div>
+      `).join("");
+
+      document.querySelectorAll(".optionBtn").forEach(btn=>{
+        btn.addEventListener("click", e=>{
+          const group = document.querySelectorAll(`[data-match="${btn.dataset.match}"]`);
+          group.forEach(b=>b.classList.remove("bg-blue-600","text-white"));
+          btn.classList.add("bg-blue-600","text-white");
+        });
+      });
+    }
+
+    document.getElementById("submitBtn").addEventListener("click", async ()=>{
+      const selections=[];
+      document.querySelectorAll(".optionBtn.bg-blue-600").forEach(b=>{
+        selections.push({match_id:Number(b.dataset.match),selection:b.dataset.value});
+      });
+      if(selections.length!==10) return alert("Please select all 10 matches.");
+      const res=await fetch(API+"/bet",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+getToken()},body:JSON.stringify({selections})});
+      const body=await res.json();
+      if(res.ok) alert("✅ Ticket placed!"); else alert("❌ "+(body.error||"Error"));
     });
 
-    async function loadBalance() {
-      try {
-        const res = await fetch("/api/wallet");
-        const data = await res.json();
-        document.getElementById("balanceBox").textContent = "₦" + (data.balance_kobo / 100).toFixed(2);
-      } catch (err) {
-        console.error("Balance error:", err);
-      }
-    }
-
-    async function loadActiveTickets() {
-      const loader = document.getElementById("activeLoading");
-      const container = document.getElementById("activeTickets");
-      loader.style.display = "block";
-      try {
-        const res = await fetch("/api/tickets?status=active");
-        const data = await res.json();
-        container.innerHTML = "";
-        if (data.length === 0) {
-          container.innerHTML = "<p>No active tickets</p>";
-        } else {
-          data.forEach(ticket => {
-            container.innerHTML += `
-              <div class="ticket">
-                <p><strong>Ticket ID:</strong> ${ticket.id}</p>
-                <p><strong>Stake:</strong> ₦${(ticket.stake_kobo / 100).toFixed(2)}</p>
-                <p><strong>Created:</strong> ${new Date(ticket.created_at).toLocaleString()}</p>
-              </div>
-            `;
-          });
-        }
-      } catch (err) {
-        console.error("Active tickets error:", err);
-      }
-      loader.style.display = "none";
-    }
-
-    async function loadTicketHistory() {
-      const loader = document.getElementById("historyLoading");
-      const container = document.getElementById("ticketHistory");
-      loader.style.display = "block";
-      try {
-        const res = await fetch("/api/tickets?status=history");
-        const data = await res.json();
-        container.innerHTML = "";
-        if (data.length === 0) {
-          container.innerHTML = "<p>No history available</p>";
-        } else {
-          data.forEach(ticket => {
-            container.innerHTML += `
-              <div class="ticket ${ticket.status}">
-                <p><strong>Ticket ID:</strong> ${ticket.id}</p>
-                <p><strong>Stake:</strong> ₦${(ticket.stake_kobo / 100).toFixed(2)}</p>
-                <p><strong>Status:</strong> ${ticket.status.toUpperCase()}</p>
-                <p><strong>Date:</strong> ${new Date(ticket.created_at).toLocaleString()}</p>
-              </div>
-            `;
-          });
-        }
-      } catch (err) {
-        console.error("History error:", err);
-      }
-      loader.style.display = "none";
-    }
+    (async()=>{
+      if(!getToken()){ location.href="index.html"; return; }
+      await loadBalance();
+      await loadRound();
+    })();
   </script>
 </body>
   </html>
