@@ -3,165 +3,176 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jackpot | PremierPredict</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+  <title>Bets - PremierPredict</title>
+  <link rel="stylesheet" href="styles.css"> <!-- Reuse wallet styles -->
   <style>
-    .bet-btn {
-      @apply px-4 py-2 rounded-lg font-medium border transition;
+    body {
+      background: #f5f5f5;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
     }
-    .bet-btn.active {
-      @apply bg-blue-600 text-white border-blue-600;
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      background: #fff;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-    .bet-btn:not(.active) {
-      @apply bg-white border-gray-300 text-gray-600 hover:bg-gray-100;
+
+    header h1 {
+      font-size: 1.2rem;
+      color: #007bff;
+    }
+
+    .balance {
+      font-size: 1rem;
+      font-weight: bold;
+      background: #007bff;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 10px;
+    }
+
+    .container {
+      padding: 1rem;
+    }
+
+    h2 {
+      margin-top: 20px;
+      color: #333;
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 5px;
+    }
+
+    .ticket {
+      background: #fff;
+      border-radius: 12px;
+      padding: 12px;
+      margin: 10px 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .ticket.won {
+      border-left: 5px solid #28a745;
+    }
+
+    .ticket.lost {
+      border-left: 5px solid #dc3545;
+    }
+
+    .loading {
+      text-align: center;
+      margin: 20px 0;
+      display: none;
+    }
+
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #007bff;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      animation: spin 1s linear infinite;
+      margin: auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
   </style>
 </head>
-<body class="bg-gray-50 min-h-screen text-gray-800 pb-20">
-  <div class="container mx-auto px-4 py-6">
-    <!-- Header -->
-    <header class="flex justify-between items-center mb-4">
-      <h1 class="text-xl font-bold text-blue-600">Jackpot</h1>
-      <div id="balanceBox" class="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg font-semibold">₦0.00</div>
-    </header>
+<body>
+  <header>
+    <h1>My Bets</h1>
+    <div class="balance" id="balanceBox">₦0.00</div>
+  </header>
 
-    <!-- Prize Poster -->
-    <div class="wallet-card rounded-xl p-6 mb-6 shadow-md bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-center">
-      <h2 class="text-2xl font-bold">🔥 Win ₦10,000,000 Jackpot!</h2>
-      <p class="text-sm mt-2">Predict all 10 matches correctly to win</p>
-    </div>
+  <div class="container">
+    <h2>Active Tickets</h2>
+    <div class="loading" id="activeLoading"><div class="spinner"></div></div>
+    <div id="activeTickets"></div>
 
-    <!-- Active Round -->
-    <div class="wallet-card rounded-xl p-6 shadow-md" data-aos="fade-up">
-      <h3 class="text-lg font-semibold mb-4" id="roundName">Loading...</h3>
-      <div id="matches" class="space-y-4"></div>
-      <button id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition mt-6">Place Ticket (₦100)</button>
-    </div>
+    <h2>Ticket History</h2>
+    <div class="loading" id="historyLoading"><div class="spinner"></div></div>
+    <div id="ticketHistory"></div>
   </div>
 
-  <!-- Bottom Navigation -->
-  <nav class="bottom-nav">
-    <a href="dashboard.html" class="nav-btn">
-      <i data-feather="home" class="w-5 h-5 mb-1"></i>
-      Home
-    </a>
-    <a href="bets.html" class="nav-btn">
-      <i data-feather="activity" class="w-5 h-5 mb-1"></i>
-      Bets
-    </a>
-    <a href="wallet.html" class="nav-btn">
-      <i data-feather="credit-card" class="w-5 h-5 mb-1"></i>
-      Wallet
-    </a>
-    <a href="jackpot.html" class="nav-btn active">
-      <i data-feather="gift" class="w-5 h-5 mb-1"></i>
-      Jackpot
-    </a>
-    <a href="profile.html" class="nav-btn">
-      <i data-feather="user" class="w-5 h-5 mb-1"></i>
-      Profile
-    </a>
-  </nav>
-
-  <!-- Loader -->
-  <div id="loader" class="fixed inset-0 bg-white flex items-center justify-center z-50 hidden">
-    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-600"></div>
-  </div>
-
+  <script src="jackpot.js"></script>
   <script>
-    AOS.init();
-    feather.replace();
-
-    const API = "/api/jackpot";
-    const API_WALLET = "/api/wallet/balance";
-    const getToken = () => localStorage.getItem("token");
-
-    const loader = document.getElementById("loader");
-    const showLoader = () => loader.classList.remove("hidden");
-    const hideLoader = () => loader.classList.add("hidden");
-
-    const formatMoney = (amount) => "₦" + Number(amount).toLocaleString("en-NG", { minimumFractionDigits: 2 });
+    document.addEventListener("DOMContentLoaded", () => {
+      loadBalance();
+      loadActiveTickets();
+      loadTicketHistory();
+    });
 
     async function loadBalance() {
       try {
-        const res = await fetch(API_WALLET, { headers: { Authorization: `Bearer ${getToken()}` } });
+        const res = await fetch("/api/wallet");
         const data = await res.json();
-        document.getElementById("balanceBox").innerText = formatMoney(data.balance || 0);
-      } catch {}
-    }
-
-    async function loadRound() {
-      showLoader();
-      try {
-        const res = await fetch(API, { headers: { Authorization: `Bearer ${getToken()}` } });
-        const data = await res.json();
-        hideLoader();
-        if (!data.matches) {
-          document.getElementById("roundName").innerText = "No Active Round";
-          return;
-        }
-        document.getElementById("roundName").innerText = `${data.name} (Round ${data.id})`;
-        document.getElementById("matches").innerHTML = data.matches.map(m => `
-          <div class="p-4 border rounded-lg">
-            <div class="font-semibold mb-2">${m.home_team} vs ${m.away_team}</div>
-            <div class="flex space-x-2">
-              <button class="bet-btn" data-match="${m.match_id}" data-choice="H">Home</button>
-              <button class="bet-btn" data-match="${m.match_id}" data-choice="D">Draw</button>
-              <button class="bet-btn" data-match="${m.match_id}" data-choice="A">Away</button>
-            </div>
-          </div>
-        `).join("");
-        setupButtons();
-      } catch {
-        hideLoader();
-        alert("❌ Error loading round");
+        document.getElementById("balanceBox").textContent = "₦" + (data.balance_kobo / 100).toFixed(2);
+      } catch (err) {
+        console.error("Balance error:", err);
       }
     }
 
-    function setupButtons() {
-      document.querySelectorAll(".bet-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const matchId = btn.dataset.match;
-          document.querySelectorAll(`.bet-btn[data-match="${matchId}"]`).forEach(b => b.classList.remove("active"));
-          btn.classList.add("active");
-        });
-      });
-    }
-
-    document.getElementById("submitBtn").addEventListener("click", async () => {
-      const selections = [];
-      document.querySelectorAll(".bet-btn.active").forEach(btn => {
-        selections.push({ match_id: Number(btn.dataset.match), selection: btn.dataset.choice });
-      });
-      if (selections.length !== 10) return alert("⚠ Please select all 10 predictions.");
-      showLoader();
+    async function loadActiveTickets() {
+      const loader = document.getElementById("activeLoading");
+      const container = document.getElementById("activeTickets");
+      loader.style.display = "block";
       try {
-        const res = await fetch(API + "/bet", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
-          body: JSON.stringify({ selections })
-        });
+        const res = await fetch("/api/tickets?status=active");
         const data = await res.json();
-        hideLoader();
-        if (res.ok) {
-          alert("✅ Ticket placed!");
-          location.href = "bets.html";
+        container.innerHTML = "";
+        if (data.length === 0) {
+          container.innerHTML = "<p>No active tickets</p>";
         } else {
-          alert("❌ " + (data.error || "Error placing ticket"));
+          data.forEach(ticket => {
+            container.innerHTML += `
+              <div class="ticket">
+                <p><strong>Ticket ID:</strong> ${ticket.id}</p>
+                <p><strong>Stake:</strong> ₦${(ticket.stake_kobo / 100).toFixed(2)}</p>
+                <p><strong>Created:</strong> ${new Date(ticket.created_at).toLocaleString()}</p>
+              </div>
+            `;
+          });
         }
-      } catch {
-        hideLoader();
-        alert("❌ Network error");
+      } catch (err) {
+        console.error("Active tickets error:", err);
       }
-    });
+      loader.style.display = "none";
+    }
 
-    (async () => {
-      if (!getToken()) { location.href = "index.html"; return; }
-      await loadBalance();
-      await loadRound();
-    })();
+    async function loadTicketHistory() {
+      const loader = document.getElementById("historyLoading");
+      const container = document.getElementById("ticketHistory");
+      loader.style.display = "block";
+      try {
+        const res = await fetch("/api/tickets?status=history");
+        const data = await res.json();
+        container.innerHTML = "";
+        if (data.length === 0) {
+          container.innerHTML = "<p>No history available</p>";
+        } else {
+          data.forEach(ticket => {
+            container.innerHTML += `
+              <div class="ticket ${ticket.status}">
+                <p><strong>Ticket ID:</strong> ${ticket.id}</p>
+                <p><strong>Stake:</strong> ₦${(ticket.stake_kobo / 100).toFixed(2)}</p>
+                <p><strong>Status:</strong> ${ticket.status.toUpperCase()}</p>
+                <p><strong>Date:</strong> ${new Date(ticket.created_at).toLocaleString()}</p>
+              </div>
+            `;
+          });
+        }
+      } catch (err) {
+        console.error("History error:", err);
+      }
+      loader.style.display = "none";
+    }
   </script>
 </body>
-</html>
+  </html>
