@@ -5,17 +5,57 @@
   <title>Jackpot | PremierPredict</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+  <style>
+    .wallet-card {
+      background: #ffffff;
+      border: 1px solid rgba(229, 231, 235, 0.8);
+    }
+    .input-field {
+      background: #f9fafb;
+      border: 1px solid #d1d5db;
+    }
+    .input-field:focus {
+      outline: none;
+      border-color: #2563eb;
+    }
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #ffffff;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-around;
+      padding: 0.6rem 0;
+      z-index: 50;
+    }
+    .nav-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 0.75rem;
+      color: #6b7280;
+      transition: all 0.2s;
+    }
+    .nav-btn.active,
+    .nav-btn:hover {
+      color: #2563eb;
+    }
+  </style>
 </head>
 <body class="bg-gray-50 min-h-screen text-gray-800 pb-20">
   <!-- Header -->
-  <header class="flex justify-between items-center px-4 py-4 bg-blue-600 text-white">
-    <h1 class="text-xl font-bold">Jackpot</h1>
-    <div id="balanceBox" class="bg-white text-blue-600 px-3 py-1 rounded-lg shadow text-sm font-bold">₦0.00</div>
+  <header class="flex justify-between items-center mb-6 px-4 py-4 bg-white shadow">
+    <h1 class="text-xl font-bold text-blue-600">Jackpot</h1>
+    <div id="balanceBox" class="text-blue-600 font-bold text-lg">₦0.00</div>
   </header>
 
   <!-- Prize Poster -->
-  <div class="mx-4 my-4 rounded-lg overflow-hidden shadow-lg">
+  <div class="mx-4 my-4 rounded-xl overflow-hidden shadow-md wallet-card" data-aos="fade-up">
     <img src="jackpot-poster.jpg" alt="Jackpot Prize" class="w-full">
   </div>
 
@@ -27,21 +67,26 @@
   </main>
 
   <!-- Bottom Navigation -->
-  <nav class="bottom-nav fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-2">
+  <nav class="bottom-nav">
     <a href="dashboard.html" class="nav-btn">
-      <i data-feather="home" class="w-5 h-5 mb-1"></i> Home
+      <i data-feather="home" class="w-5 h-5 mb-1"></i>
+      Home
     </a>
     <a href="bets.html" class="nav-btn">
-      <i data-feather="activity" class="w-5 h-5 mb-1"></i> Bets
+      <i data-feather="activity" class="w-5 h-5 mb-1"></i>
+      Bets
     </a>
     <a href="wallet.html" class="nav-btn">
-      <i data-feather="credit-card" class="w-5 h-5 mb-1"></i> Wallet
+      <i data-feather="credit-card" class="w-5 h-5 mb-1"></i>
+      Wallet
     </a>
-    <a href="jackpot.html" class="nav-btn active text-blue-600">
-      <i data-feather="gift" class="w-5 h-5 mb-1"></i> Jackpot
+    <a href="jackpot.html" class="nav-btn active">
+      <i data-feather="gift" class="w-5 h-5 mb-1"></i>
+      Jackpot
     </a>
     <a href="profile.html" class="nav-btn">
-      <i data-feather="user" class="w-5 h-5 mb-1"></i> Profile
+      <i data-feather="user" class="w-5 h-5 mb-1"></i>
+      Profile
     </a>
   </nav>
 
@@ -51,6 +96,7 @@
   </div>
 
   <script>
+    AOS.init();
     feather.replace();
     const API = "/api/jackpot";
     const getToken = () => localStorage.getItem("token");
@@ -78,20 +124,20 @@
       }
       document.getElementById("roundName").innerText = body.name + " (Round "+body.id+")";
       document.getElementById("matches").innerHTML = body.matches.map(m=>`
-        <div class="p-4 border rounded bg-white shadow">
+        <div class="wallet-card rounded-xl p-4 shadow-md" data-aos="fade-up">
           <b>${m.home_team}</b> vs <b>${m.away_team}</b>
           <div class="flex space-x-2 mt-2">
             <label class="flex-1">
               <input type="radio" name="m_${m.match_id}" value="H" class="hidden peer">
-              <div class="peer-checked:bg-blue-600 peer-checked:text-white text-center py-2 border rounded cursor-pointer">Home</div>
+              <div class="peer-checked:bg-blue-600 peer-checked:text-white text-center py-2 border rounded-lg cursor-pointer">Home</div>
             </label>
             <label class="flex-1">
               <input type="radio" name="m_${m.match_id}" value="D" class="hidden peer">
-              <div class="peer-checked:bg-blue-600 peer-checked:text-white text-center py-2 border rounded cursor-pointer">Draw</div>
+              <div class="peer-checked:bg-blue-600 peer-checked:text-white text-center py-2 border rounded-lg cursor-pointer">Draw</div>
             </label>
             <label class="flex-1">
               <input type="radio" name="m_${m.match_id}" value="A" class="hidden peer">
-              <div class="peer-checked:bg-blue-600 peer-checked:text-white text-center py-2 border rounded cursor-pointer">Away</div>
+              <div class="peer-checked:bg-blue-600 peer-checked:text-white text-center py-2 border rounded-lg cursor-pointer">Away</div>
             </label>
           </div>
         </div>
@@ -118,4 +164,4 @@
     })();
   </script>
 </body>
-  </html>
+</html>
