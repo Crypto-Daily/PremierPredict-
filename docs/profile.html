@@ -1,1 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile | PremierPredict</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+  <style>
+    .profile-card {
+      background: #ffffff;
+      border: 1px solid rgba(229, 231, 235, 0.8);
+    }
+    .input-field {
+      background: #f9fafb;
+      border: 1px solid #d1d5db;
+    }
+    .input-field:focus {
+      outline: none;
+      border-color: #2563eb;
+    }
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #ffffff;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-around;
+      padding: 0.6rem 0;
+      z-index: 50;
+    }
+    .nav-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 0.75rem;
+      color: #6b7280;
+      transition: all 0.2s;
+    }
+    .nav-btn.active,
+    .nav-btn:hover {
+      color: #2563eb;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen text-gray-800 pb-20">
+  <div class="container mx-auto px-4 py-6">
+    <!-- Header -->
+    <header class="flex justify-between items-center mb-6">
+      <h1 class="text-2xl font-bold text-blue-600">Profile</h1>
+      <div class="flex items-center space-x-4">
+        <div id="balanceBox" class="text-blue-600 font-semibold">₦0.00</div>
+        <button id="logoutBtn" class="text-sm text-red-500 hover:underline">Logout</button>
+      </div>
+    </header>
 
+    <!-- Profile Info -->
+    <div class="profile-card rounded-xl p-6 mb-6 shadow-md" data-aos="fade-up">
+      <h2 class="text-lg font-semibold mb-4">Account Information</h2>
+      <p><b>Username:</b> <span id="username">Loading...</span></p>
+      <p><b>Email:</b> <span id="email">Loading...</span></p>
+      <p><b>Joined:</b> <span id="joined">Loading...</span></p>
+    </div>
+
+    <!-- Update Info -->
+    <div class="profile-card rounded-xl p-6 mb-6 shadow-md" data-aos="fade-up">
+      <h2 class="text-lg font-semibold mb-4">Update Profile</h2>
+      <div class="mb-4">
+        <label class="block text-sm font-medium mb-2">Full Name</label>
+        <input type="text" id="fullName" class="input-field w-full px-4 py-3 rounded-lg" placeholder="Enter full name">
+      </div>
+      <button id="updateProfileBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition">Update</button>
+    </div>
+
+    <!-- Change Password -->
+    <div class="profile-card rounded-xl p-6 shadow-md" data-aos="fade-up">
+      <h2 class="text-lg font-semibold mb-4">Change Password</h2>
+      <div class="mb-4">
+        <label class="block text-sm font-medium mb-2">New Password</label>
+        <input type="password" id="newPassword" class="input-field w-full px-4 py-3 rounded-lg" placeholder="Enter new password">
+      </div>
+      <button id="changePasswordBtn" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg font-medium transition">Change Password</button>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="dashboard.html" class="nav-btn">
+      <i data-feather="home" class="w-5 h-5 mb-1"></i>
+      Home
+    </a>
+    <a href="bets.html" class="nav-btn">
+      <i data-feather="activity" class="w-5 h-5 mb-1"></i>
+      Bets
+    </a>
+    <a href="wallet.html" class="nav-btn">
+      <i data-feather="credit-card" class="w-5 h-5 mb-1"></i>
+      Wallet
+    </a>
+    <a href="jackpot.html" class="nav-btn">
+      <i data-feather="gift" class="w-5 h-5 mb-1"></i>
+      Jackpot
+    </a>
+    <a href="profile.html" class="nav-btn active">
+      <i data-feather="user" class="w-5 h-5 mb-1"></i>
+      Profile
+    </a>
+  </nav>
+
+  <script>
+    AOS.init();
+    feather.replace();
+
+    const API_URL = "https://premierpredict.onrender.com/api";
+    const getToken = () => localStorage.getItem("token");
+
+    const logout = () => {
+      localStorage.removeItem("token");
+      window.location.href = "index.html";
+    };
+    document.getElementById("logoutBtn").addEventListener("click", logout);
+
+    const formatMoney = (amount) => "₦" + Number(amount).toLocaleString("en-NG", { minimumFractionDigits: 2 });
+
+    // Load wallet balance
+    async function loadWallet() {
+      const token = getToken();
+      try {
+        const res = await fetch(`${API_URL}/wallet/balance`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        document.getElementById("balanceBox").innerText = formatMoney(data.balance || 0);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // Load profile info
+    async function loadProfile() {
+      const token = getToken();
+      try {
+        const res = await fetch(`${API_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        document.getElementById("username").innerText = data.username || "N/A";
+        document.getElementById("email").innerText = data.email || "N/A";
+        document.getElementById("joined").innerText = data.created_at ? new Date(data.created_at).toLocaleDateString() : "N/A";
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // Update profile
+    document.getElementById("updateProfileBtn").addEventListener("click", async () => {
+      const fullName = document.getElementById("fullName").value.trim();
+      if (!fullName) return alert("Enter full name");
+
+      try {
+        const res = await fetch(`${API_URL}/auth/update`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+          body: JSON.stringify({ fullName }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert("✅ Profile updated successfully!");
+          loadProfile();
+        } else {
+          alert("❌ " + (data.error || "Update failed"));
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    // Change password
+    document.getElementById("changePasswordBtn").addEventListener("click", async () => {
+      const newPassword = document.getElementById("newPassword").value.trim();
+      if (!newPassword) return alert("Enter new password");
+
+      try {
+        const res = await fetch(`${API_URL}/auth/change-password`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+          body: JSON.stringify({ password: newPassword }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert("✅ Password changed successfully!");
+        } else {
+          alert("❌ " + (data.error || "Password change failed"));
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    loadWallet();
+    loadProfile();
+  </script>
+</body>
+      </html>
