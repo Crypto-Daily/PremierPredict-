@@ -5,46 +5,85 @@
   <title>Bets | PremierPredict</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+  <style>
+    .wallet-card {
+      background: #ffffff;
+      border: 1px solid rgba(229, 231, 235, 0.8);
+    }
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #ffffff;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-around;
+      padding: 0.6rem 0;
+      z-index: 50;
+    }
+    .nav-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 0.75rem;
+      color: #6b7280;
+      transition: all 0.2s;
+    }
+    .nav-btn.active,
+    .nav-btn:hover {
+      color: #2563eb; /* blue active */
+    }
+  </style>
 </head>
 <body class="bg-gray-50 min-h-screen text-gray-800 pb-20">
-  <!-- Header -->
-  <header class="flex justify-between items-center px-4 py-4 bg-blue-600 text-white">
-    <h1 class="text-xl font-bold">My Bets</h1>
-    <div id="balanceBox" class="bg-white text-blue-600 px-3 py-1 rounded-lg shadow text-sm font-bold">₦0.00</div>
-  </header>
+  <div class="container mx-auto px-4 py-6">
+    <!-- Header -->
+    <header class="flex justify-between items-center mb-6">
+      <div class="flex items-center space-x-2">
+        <i data-feather="activity" class="w-6 h-6 text-blue-600"></i>
+        <h1 class="text-2xl font-bold text-blue-600">My Bets</h1>
+      </div>
+      <div id="balanceBox" class="bg-white text-blue-600 px-3 py-1 rounded-lg shadow text-sm font-bold">₦0.00</div>
+    </header>
 
-  <!-- Content -->
-  <main class="container mx-auto px-4 py-6 space-y-6">
     <!-- Active Tickets -->
-    <section>
-      <h2 class="text-lg font-semibold mb-3">Active Tickets</h2>
-      <div id="tickets" class="space-y-3">Loading...</div>
-    </section>
+    <div class="wallet-card rounded-xl p-6 mb-6 shadow-md" data-aos="fade-up">
+      <h2 class="text-lg font-semibold mb-4">Active Tickets</h2>
+      <div id="tickets" class="space-y-3 text-sm">Loading...</div>
+    </div>
 
     <!-- Ticket History -->
-    <section>
-      <h2 class="text-lg font-semibold mb-3">Ticket History</h2>
-      <div id="history" class="space-y-3">Loading...</div>
-    </section>
-  </main>
+    <div class="wallet-card rounded-xl p-6 shadow-md" data-aos="fade-up">
+      <h2 class="text-lg font-semibold mb-4">Ticket History</h2>
+      <div id="history" class="space-y-3 text-sm">Loading...</div>
+    </div>
+  </div>
 
   <!-- Bottom Navigation -->
-  <nav class="bottom-nav fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-2">
+  <nav class="bottom-nav">
     <a href="dashboard.html" class="nav-btn">
-      <i data-feather="home" class="w-5 h-5 mb-1"></i> Home
+      <i data-feather="home" class="w-5 h-5 mb-1"></i>
+      Home
     </a>
-    <a href="bets.html" class="nav-btn active text-blue-600">
-      <i data-feather="activity" class="w-5 h-5 mb-1"></i> Bets
+    <a href="bets.html" class="nav-btn active">
+      <i data-feather="activity" class="w-5 h-5 mb-1"></i>
+      Bets
     </a>
     <a href="wallet.html" class="nav-btn">
-      <i data-feather="credit-card" class="w-5 h-5 mb-1"></i> Wallet
+      <i data-feather="credit-card" class="w-5 h-5 mb-1"></i>
+      Wallet
     </a>
     <a href="jackpot.html" class="nav-btn">
-      <i data-feather="gift" class="w-5 h-5 mb-1"></i> Jackpot
+      <i data-feather="gift" class="w-5 h-5 mb-1"></i>
+      Jackpot
     </a>
     <a href="profile.html" class="nav-btn">
-      <i data-feather="user" class="w-5 h-5 mb-1"></i> Profile
+      <i data-feather="user" class="w-5 h-5 mb-1"></i>
+      Profile
     </a>
   </nav>
 
@@ -54,8 +93,10 @@
   </div>
 
   <script>
+    AOS.init();
     feather.replace();
-    const API = "/api/jackpot";
+
+    const API_URL = "https://premierpredict.onrender.com/api";
     const getToken = () => localStorage.getItem("token");
 
     const spinner = document.getElementById("spinner");
@@ -65,38 +106,57 @@
     const formatMoney = (n) => "₦" + Number(n).toLocaleString("en-NG",{minimumFractionDigits:2});
 
     async function loadBalance(){
-      const res = await fetch("/api/wallet/balance",{ headers:{Authorization:"Bearer "+getToken()} });
-      const data = await res.json();
-      document.getElementById("balanceBox").innerText = formatMoney(data.balance||0);
+      try {
+        const res = await fetch(`${API_URL}/wallet/balance`, { headers:{Authorization:"Bearer "+getToken()} });
+        const data = await res.json();
+        document.getElementById("balanceBox").innerText = formatMoney(data.balance||0);
+      } catch (err) {
+        console.error(err);
+      }
     }
 
     async function loadTickets(){
       showSpinner();
-      const res = await fetch(API+"/tickets",{ headers:{Authorization:"Bearer "+getToken()} });
-      const data = await res.json();
-      hideSpinner();
+      try {
+        const res = await fetch(`${API_URL}/jackpot/tickets`, { headers:{Authorization:"Bearer "+getToken()} });
+        const data = await res.json();
+        hideSpinner();
 
-      const ticketsDiv = document.getElementById("tickets");
-      const historyDiv = document.getElementById("history");
-      if(!data.tickets){ ticketsDiv.innerHTML = "<p>No tickets</p>"; return; }
+        const ticketsDiv = document.getElementById("tickets");
+        const historyDiv = document.getElementById("history");
 
-      ticketsDiv.innerHTML = data.tickets.filter(t=>!t.status || t.status==="pending").map(t=>`
-        <div class="p-4 border rounded bg-white shadow">
-          <b>Ticket #${t.id}</b> — Round ${t.round_id}
-          <ul class="mt-2 text-sm">
-            ${t.selections.map(s=>`<li>${s.match_id}: ${s.selection} → ${s.result||"pending"}</li>`).join("")}
-          </ul>
-        </div>
-      `).join("");
+        if(!data.tickets || !data.tickets.length){
+          ticketsDiv.innerHTML = "<p>No tickets</p>";
+          historyDiv.innerHTML = "<p>No history</p>";
+          return;
+        }
 
-      historyDiv.innerHTML = data.tickets.filter(t=>t.status==="won"||t.status==="lost").map(t=>`
-        <div class="p-4 border rounded bg-gray-50">
-          <b>Ticket #${t.id}</b> — ${t.status.toUpperCase()}
-          <ul class="mt-2 text-sm">
-            ${t.selections.map(s=>`<li>${s.match_id}: ${s.selection} → ${s.result||"pending"}</li>`).join("")}
-          </ul>
-        </div>
-      `).join("");
+        ticketsDiv.innerHTML = data.tickets
+          .filter(t=>!t.status || t.status==="pending")
+          .map(t=>`
+            <div class="p-4 border rounded bg-white shadow">
+              <b>Ticket #${t.id}</b> — Round ${t.round_id}
+              <ul class="mt-2 text-sm list-disc pl-4">
+                ${t.selections.map(s=>`<li>${s.match_id}: ${s.selection} → ${s.result||"pending"}</li>`).join("")}
+              </ul>
+            </div>
+          `).join("");
+
+        historyDiv.innerHTML = data.tickets
+          .filter(t=>t.status==="won"||t.status==="lost")
+          .map(t=>`
+            <div class="p-4 border rounded bg-gray-50">
+              <b>Ticket #${t.id}</b> — <span class="${t.status==="won"?"text-green-600":"text-red-600"} font-semibold">${t.status.toUpperCase()}</span>
+              <ul class="mt-2 text-sm list-disc pl-4">
+                ${t.selections.map(s=>`<li>${s.match_id}: ${s.selection} → ${s.result||"pending"}</li>`).join("")}
+              </ul>
+            </div>
+          `).join("");
+      } catch (err) {
+        hideSpinner();
+        console.error(err);
+        alert("❌ Error loading tickets");
+      }
     }
 
     (async()=>{
