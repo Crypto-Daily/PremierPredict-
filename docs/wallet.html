@@ -118,12 +118,21 @@
     </a>
   </nav>
 
+  <!-- Spinner -->
+  <div id="spinner" class="fixed inset-0 bg-white bg-opacity-70 flex items-center justify-center hidden z-50">
+    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+  </div>
+
   <script>
     AOS.init();
     feather.replace();
 
     const API_URL = "https://premierpredict.onrender.com/api";  
     const getToken = () => localStorage.getItem("token");  
+
+    const spinner = document.getElementById("spinner");
+    const showSpinner = () => spinner.classList.remove("hidden");
+    const hideSpinner = () => spinner.classList.add("hidden");
 
     const logout = () => {
       localStorage.removeItem("token");
@@ -141,6 +150,7 @@
         return;
       }
       try {
+        showSpinner();
         const res = await fetch(`${API_URL}/wallet/balance`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -149,6 +159,8 @@
       } catch (err) {
         console.error(err);
         alert("❌ Error fetching wallet data");
+      } finally {
+        hideSpinner();
       }
     }
 
@@ -158,6 +170,7 @@
       if (!amount || amount <= 0) return alert("Enter a valid amount");
 
       try {
+        showSpinner();
         const res = await fetch(`${API_URL}/wallet/deposit/initiate`, {
           method: "POST",
           headers: {
@@ -176,6 +189,8 @@
       } catch (err) {
         console.error(err);
         alert("❌ Error connecting to server");
+      } finally {
+        hideSpinner();
       }
     }
 
@@ -185,6 +200,7 @@
       if (!amount || amount <= 0) return alert("Enter a valid amount");
 
       try {
+        showSpinner();
         const res = await fetch(`${API_URL}/wallet/withdraw`, {
           method: "POST",
           headers: {
@@ -204,6 +220,8 @@
       } catch (err) {
         console.error(err);
         alert("❌ Error connecting to server");
+      } finally {
+        hideSpinner();
       }
     }
 
@@ -213,6 +231,7 @@
       (async () => {
         const token = getToken();
         try {
+          showSpinner();
           const res = await fetch(`${API_URL}/wallet/deposit/verify/${reference}`, {
             method: "GET",
             headers: { Authorization: `Bearer ${token}` }
@@ -228,6 +247,8 @@
         } catch (err) {
           console.error(err);
           alert("❌ Error verifying payment");
+        } finally {
+          hideSpinner();
         }
       })();
     }
@@ -238,4 +259,4 @@
     loadWallet();
   </script>
 </body>
-</html>
+        </html>
