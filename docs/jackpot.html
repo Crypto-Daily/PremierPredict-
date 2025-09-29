@@ -5,21 +5,13 @@
   <title>Jackpot | PremierPredict</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
   <style>
     .wallet-card {
       background: #ffffff;
       border: 1px solid rgba(229, 231, 235, 0.8);
-    }
-    .input-field {
-      background: #f9fafb;
-      border: 1px solid #d1d5db;
-    }
-    .input-field:focus {
-      outline: none;
-      border-color: #2563eb;
     }
     .bottom-nav {
       position: fixed;
@@ -43,28 +35,36 @@
     }
     .nav-btn.active,
     .nav-btn:hover {
-      color: #2563eb;
+      color: #2563eb; /* blue active */
     }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen text-gray-800 pb-20">
-  <!-- Header -->
-  <header class="flex justify-between items-center mb-6 px-4 py-4 bg-white shadow">
-    <h1 class="text-xl font-bold text-blue-600">Jackpot</h1>
-    <div id="balanceBox" class="text-blue-600 font-bold text-lg">₦0.00</div>
-  </header>
+  <div class="container mx-auto px-4 py-6">
+    <!-- Header -->
+    <header class="flex justify-between items-center mb-6">
+      <div class="flex items-center space-x-2">
+        <i data-feather="gift" class="w-6 h-6 text-blue-600"></i>
+        <h1 class="text-2xl font-bold text-blue-600">Jackpot</h1>
+      </div>
+      <div id="balanceBox" class="bg-blue-600 text-white px-3 py-1 rounded-lg shadow text-sm font-bold">₦0.00</div>
+    </header>
 
-  <!-- Prize Poster -->
-  <div class="mx-4 my-4 rounded-xl overflow-hidden shadow-md wallet-card" data-aos="fade-up">
-    <img src="jackpot-poster.jpg" alt="Jackpot Prize" class="w-full">
+    <!-- Jackpot Prize Section -->
+    <div class="wallet-card rounded-xl p-6 mb-6 shadow-md text-center" data-aos="zoom-in">
+      <div class="text-5xl mb-3">🏆</div>
+      <h2 class="text-xl font-semibold text-gray-700 mb-2">Jackpot Prize</h2>
+      <div class="text-4xl font-bold text-blue-600">₦1,000,000</div>
+      <p class="text-gray-500 mt-2">Predict all 10 matches correctly to win the grand prize!</p>
+    </div>
+
+    <!-- Active Round -->
+    <div class="wallet-card rounded-xl p-6 shadow-md" data-aos="fade-up">
+      <h3 id="roundName" class="text-lg font-semibold mb-4">Loading...</h3>
+      <div id="matches" class="space-y-4"></div>
+      <button id="submitBtn" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition">Place Ticket (₦100)</button>
+    </div>
   </div>
-
-  <!-- Active Round -->
-  <main class="container mx-auto px-4 py-6">
-    <h2 id="roundName" class="text-lg font-semibold mb-4">Loading...</h2>
-    <div id="matches" class="space-y-4"></div>
-    <button id="submitBtn" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition">Place Ticket (₦100)</button>
-  </main>
 
   <!-- Bottom Navigation -->
   <nav class="bottom-nav">
@@ -124,20 +124,20 @@
       }
       document.getElementById("roundName").innerText = body.name + " (Round "+body.id+")";
       document.getElementById("matches").innerHTML = body.matches.map(m=>`
-        <div class="wallet-card rounded-xl p-4 shadow-md" data-aos="fade-up">
+        <div class="p-4 border rounded bg-white shadow">
           <b>${m.home_team}</b> vs <b>${m.away_team}</b>
           <div class="flex space-x-2 mt-2">
             <label class="flex-1">
               <input type="radio" name="m_${m.match_id}" value="H" class="hidden peer">
-              <div class="peer-checked:bg-blue-600 peer-checked:text-white text-center py-2 border rounded-lg cursor-pointer">Home</div>
+              <div class="peer-checked:bg-blue-600 peer-checked:text-white text-center py-2 border rounded cursor-pointer">Home</div>
             </label>
             <label class="flex-1">
               <input type="radio" name="m_${m.match_id}" value="D" class="hidden peer">
-              <div class="peer-checked:bg-blue-600 peer-checked:text-white text-center py-2 border rounded-lg cursor-pointer">Draw</div>
+              <div class="peer-checked:bg-blue-600 peer-checked:text-white text-center py-2 border rounded cursor-pointer">Draw</div>
             </label>
             <label class="flex-1">
               <input type="radio" name="m_${m.match_id}" value="A" class="hidden peer">
-              <div class="peer-checked:bg-blue-600 peer-checked:text-white text-center py-2 border rounded-lg cursor-pointer">Away</div>
+              <div class="peer-checked:bg-blue-600 peer-checked:text-white text-center py-2 border rounded cursor-pointer">Away</div>
             </label>
           </div>
         </div>
@@ -164,4 +164,4 @@
     })();
   </script>
 </body>
-</html>
+  </html>
