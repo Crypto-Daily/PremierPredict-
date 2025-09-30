@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dashboard | PremierPredict</title>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -47,14 +47,14 @@
         <i data-feather="award" class="w-6 h-6 text-blue-600"></i>
         <h1 class="text-2xl font-bold text-blue-600">PremierPredict</h1>
       </div>
-      <button onclick="window.location.href='settings.html'">
-        <i data-feather="settings" class="w-6 h-6 text-gray-600 hover:text-blue-600"></i>
-      </button>
+      <a href="settings.html">
+        <i data-feather="settings" class="w-6 h-6 text-gray-600 hover:text-blue-600 cursor-pointer"></i>
+      </a>
     </header>
 
-    <!-- Profile Card -->
+    <!-- Profile Section -->
     <div class="wallet-card rounded-xl p-6 mb-6 shadow-md text-center" data-aos="fade-up">
-      <div id="profileCircle" class="w-20 h-20 flex items-center justify-center rounded-full mx-auto mb-4 bg-blue-600 text-white text-3xl font-bold">
+      <div id="avatar" class="w-20 h-20 mx-auto mb-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-3xl font-bold">
         U
       </div>
       <h3 id="username" class="text-xl font-bold">Loading...</h3>
@@ -76,26 +76,26 @@
     </div>
 
     <!-- Customer Care -->
-    <div class="wallet-card rounded-xl p-6 shadow-md" data-aos="fade-up">
+    <div class="wallet-card rounded-xl p-6 mb-6 shadow-md" data-aos="fade-up">
       <h3 class="font-bold text-lg mb-4 flex items-center">
         <i data-feather="headphones" class="mr-2 w-5 h-5"></i> Customer Care
       </h3>
       <div class="space-y-3 text-sm">
-        <div class="flex items-center space-x-2">
-          <i data-feather="message-circle" class="w-5 h-5 text-green-500"></i>
-          <a href="https://wa.me/2347025082930" target="_blank" class="text-blue-600 hover:underline">+234 702 508 2930</a>
-        </div>
-        <div class="flex items-center space-x-2">
-          <i data-feather="mail" class="w-5 h-5 text-red-500"></i>
-          <a href="mailto:premeirpredict@gmail.com" class="text-blue-600 hover:underline">premeirpredict@gmail.com</a>
-        </div>
+        <p>
+          <i data-feather="phone" class="inline w-4 h-4 text-green-500 mr-2"></i>
+          WhatsApp: <a href="https://wa.me/2347025082930" class="text-blue-600 hover:underline">+234 702 508 2930</a>
+        </p>
+        <p>
+          <i data-feather="mail" class="inline w-4 h-4 text-red-500 mr-2"></i>
+          Email: <a href="mailto:premeirpredict@gmail.com" class="text-blue-600 hover:underline">premeirpredict@gmail.com</a>
+        </p>
       </div>
     </div>
 
     <!-- Logout Button -->
-    <div class="mt-6">
-      <button id="logoutBtn" class="w-full bg-red-500 hover:bg-red-600 text-white py-3 rounded-lg font-medium transition">Logout</button>
-    </div>
+    <button id="logoutBtn" class="w-full bg-red-500 hover:bg-red-600 text-white py-3 rounded-lg font-medium transition mt-6">
+      Logout
+    </button>
   </div>
 
   <!-- Bottom Navigation -->
@@ -123,6 +123,9 @@
   </nav>
 
   <script>
+    AOS.init();
+    feather.replace();
+
     const API_URL = "https://premierpredict.onrender.com/api";
     const getToken = () => localStorage.getItem("token");
 
@@ -135,7 +138,6 @@
     const formatMoney = (amount) =>
       "₦" + Number(amount).toLocaleString("en-NG", { minimumFractionDigits: 2 });
 
-    // Load Dashboard
     async function loadDashboard() {
       const token = getToken();
       if (!token) {
@@ -147,18 +149,17 @@
         const res = await fetch(`${API_URL}/dashboard`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-
         if (!res.ok) throw new Error("Bad response from server");
 
         const data = await res.json();
 
+        // Profile
         const username = data.user?.username || "User";
         document.getElementById("username").innerText = username;
         document.getElementById("balance").innerText = formatMoney(data.balance || 0);
-        document.getElementById("welcomeUser")?.innerText = username;
 
-        // Profile Circle Letter
-        document.getElementById("profileCircle").innerText = username.charAt(0).toUpperCase();
+        // Avatar (first letter of username)
+        document.getElementById("avatar").innerText = username.charAt(0).toUpperCase();
 
         // Quick stats
         document.getElementById("totalBets").innerText = data.totalBets || 0;
@@ -172,8 +173,6 @@
       }
     }
 
-    AOS.init();
-    feather.replace();
     loadDashboard();
   </script>
 </body>
