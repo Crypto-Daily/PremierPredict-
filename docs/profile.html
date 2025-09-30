@@ -3,16 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dashboard | PremierPredict</title>
+  <title>Profile | PremierPredict</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet"/>
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
   <style>
-    .wallet-card {
-      background: #ffffff;
-      border: 1px solid rgba(229, 231, 235, 0.8);
-    }
     .bottom-nav {
       position: fixed;
       bottom: 0;
@@ -39,21 +35,10 @@
     }
   </style>
 </head>
-<body class="bg-gray-50 min-h-screen text-gray-800 pb-20">
+<body class="bg-gray-100 min-h-screen text-gray-800 pb-20">
   <div class="container mx-auto px-4 py-6">
-    <!-- Header -->
-    <header class="flex justify-between items-center mb-6">
-      <div class="flex items-center space-x-2">
-        <i data-feather="user" class="w-6 h-6 text-blue-600"></i>
-        <h1 class="text-2xl font-bold text-blue-600">PremierPredict</h1>
-      </div>
-      <a href="settings.html">
-        <i data-feather="settings" class="w-6 h-6 text-gray-600 hover:text-blue-600 cursor-pointer"></i>
-      </a>
-    </header>
-
-    <!-- Profile Section -->
-    <div class="wallet-card rounded-xl p-6 mb-6 shadow-md text-center" data-aos="fade-up">
+    <!-- Profile Card -->
+    <div class="bg-white rounded-xl p-6 mb-6 shadow-md text-center" data-aos="fade-up">
       <div id="avatar" class="w-20 h-20 mx-auto mb-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-3xl font-bold">
         U
       </div>
@@ -62,48 +47,40 @@
       <p class="text-lg font-bold text-blue-600">Balance: <span id="balance">₦0.00</span></p>
     </div>
 
-    <!-- Quick Stats -->
-    <div class="wallet-card rounded-xl p-6 mb-6 shadow-md" data-aos="fade-up">
-      <h3 class="font-bold text-lg mb-4 flex items-center">
-        <i data-feather="bar-chart-2" class="mr-2 w-5 h-5"></i> Performance Stats
-      </h3>
-      <div class="space-y-3 text-sm">
-        <div class="flex justify-between"><span>Active Bets</span><span id="activeBets">0</span></div>
-        <div class="flex justify-between"><span>Won Rounds</span><span id="wonRounds" class="text-green-500">0</span></div>
-        <div class="flex justify-between"><span>Lost Rounds</span><span id="lostRounds" class="text-red-500">0</span></div>
-
-        <!-- Performance Scale -->
-        <div class="mt-4">
-          <label class="block text-gray-600 text-sm mb-1">Performance Scale</label>
-          <div class="w-full bg-gray-200 rounded-full h-3">
-            <div id="performanceBar" class="bg-blue-600 h-3 rounded-full" style="width: 0%"></div>
-          </div>
-          <span id="performanceText" class="text-xs text-gray-500">0%</span>
-        </div>
-      </div>
+    <!-- Menu Section -->
+    <div class="bg-white rounded-xl p-4 mb-6 shadow-md divide-y divide-gray-200 text-sm" data-aos="fade-up">
+      <a href="#" class="flex justify-between items-center py-3">
+        <span class="flex items-center"><i data-feather="bell" class="w-4 h-4 mr-2"></i> Notification Center</span>
+        <i data-feather="chevron-right" class="w-4 h-4"></i>
+      </a>
+      <a href="#" class="flex justify-between items-center py-3">
+        <span class="flex items-center"><i data-feather="help-circle" class="w-4 h-4 mr-2"></i> How to Play</span>
+        <i data-feather="chevron-right" class="w-4 h-4"></i>
+      </a>
+      <a href="#" class="flex justify-between items-center py-3">
+        <span class="flex items-center"><i data-feather="message-circle" class="w-4 h-4 mr-2"></i> Share an Idea</span>
+        <i data-feather="chevron-right" class="w-4 h-4"></i>
+      </a>
+      <a href="#" class="flex justify-between items-center py-3">
+        <span class="flex items-center"><i data-feather="refresh-cw" class="w-4 h-4 mr-2"></i> Update App</span>
+        <i data-feather="chevron-right" class="w-4 h-4"></i>
+      </a>
     </div>
 
-    <!-- Customer Care -->
-    <div class="wallet-card rounded-xl p-6 mb-6 shadow-md" data-aos="fade-up">
-      <h3 class="font-bold text-lg mb-4 flex items-center">
-        <i data-feather="headphones" class="mr-2 w-5 h-5"></i> Customer Care
-      </h3>
-      <div class="space-y-3 text-sm">
-        <p>
-          <i data-feather="phone" class="inline w-4 h-4 text-green-500 mr-2"></i>
-          WhatsApp: <a href="https://wa.me/2347025082930" class="text-blue-600 hover:underline">+234 702 508 2930</a>
-        </p>
-        <p>
-          <i data-feather="mail" class="inline w-4 h-4 text-red-500 mr-2"></i>
-          Email: <a href="mailto:premeirpredict@gmail.com" class="text-blue-600 hover:underline">premeirpredict@gmail.com</a>
-        </p>
-      </div>
-    </div>
-
-    <!-- Logout Button -->
-    <button id="logoutBtn" class="w-full bg-red-500 hover:bg-red-600 text-white py-3 rounded-lg font-medium transition mt-6">
+    <!-- Logout -->
+    <button id="logoutBtn" class="w-full bg-red-500 hover:bg-red-600 text-white py-3 rounded-lg font-medium transition">
       Logout
     </button>
+
+    <!-- Footer -->
+    <div class="text-center text-xs text-gray-500 mt-6">
+      <p>© 2025 PremierPredict. All rights reserved.</p>
+      <p class="mt-2">Age 18+ only. Play responsibly. Betting can be addictive.</p>
+      <div class="mt-2">
+        <a href="#" class="underline">Terms & Conditions</a> | 
+        <a href="#" class="underline">About Us</a>
+      </div>
+    </div>
   </div>
 
   <!-- Bottom Navigation -->
@@ -146,7 +123,7 @@
     const formatMoney = (amount) =>
       "₦" + Number(amount).toLocaleString("en-NG", { minimumFractionDigits: 2 });
 
-    async function loadDashboard() {
+    async function loadProfile() {
       const token = getToken();
       if (!token) {
         alert("⚠ Please login first.");
@@ -160,35 +137,18 @@
         if (!res.ok) throw new Error("Bad response from server");
 
         const data = await res.json();
-
-        // Profile
         const username = data.user?.username || "User";
+
         document.getElementById("username").innerText = username;
         document.getElementById("balance").innerText = formatMoney(data.balance || 0);
-
-        // Avatar (first letter of username)
         document.getElementById("avatar").innerText = username.charAt(0).toUpperCase();
-
-        // Stats
-        document.getElementById("activeBets").innerText = data.activeBets || 0;
-        document.getElementById("wonRounds").innerText = data.wonRounds || 0;
-        document.getElementById("lostRounds").innerText = data.lostRounds || 0;
-
-        // Performance scale (percentage of won rounds out of total rounds played)
-        const totalRounds = (data.wonRounds || 0) + (data.lostRounds || 0);
-        let performance = 0;
-        if (totalRounds > 0) {
-          performance = ((data.wonRounds / totalRounds) * 100).toFixed(1);
-        }
-        document.getElementById("performanceBar").style.width = performance + "%";
-        document.getElementById("performanceText").innerText = performance + "%";
       } catch (err) {
-        console.error("❌ Dashboard fetch error:", err);
-        alert("❌ Error fetching dashboard data");
+        console.error("❌ Profile fetch error:", err);
+        alert("❌ Error fetching profile data");
       }
     }
 
-    loadDashboard();
+    loadProfile();
   </script>
 </body>
-      </html>
+                                          </html>
