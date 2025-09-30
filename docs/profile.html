@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Profile | PremierPredict</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet"/>
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.css"></script>
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
   <style>
@@ -35,52 +35,63 @@
     }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen text-gray-800 pb-20">
-  <div class="container mx-auto px-4 py-6">
-    <!-- Profile Card -->
-    <div class="bg-white rounded-xl p-6 mb-6 shadow-md text-center" data-aos="fade-up">
-      <div id="avatar" class="w-20 h-20 mx-auto mb-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-3xl font-bold">
-        U
+<body class="bg-gray-50 min-h-screen text-gray-800 pb-20">
+
+  <!-- Header -->
+  <header class="flex justify-between items-center p-4 border-b bg-white">
+    <div class="flex items-center space-x-2">
+      <i data-feather="user" class="w-6 h-6 text-blue-600"></i>
+      <h1 class="text-lg font-bold text-blue-600">PremierPredict</h1>
+    </div>
+    <a href="settings.html">
+      <i data-feather="settings" class="w-6 h-6 text-gray-600 hover:text-blue-600 cursor-pointer"></i>
+    </a>
+  </header>
+
+  <!-- Profile -->
+  <div class="text-center p-6 bg-white border-b">
+    <div id="avatar" class="w-20 h-20 mx-auto mb-3 rounded-full bg-blue-600 text-white flex items-center justify-center text-3xl font-bold">
+      U
+    </div>
+    <h3 id="username" class="text-lg font-bold">Loading...</h3>
+    <p class="text-gray-500 mb-2">Member</p>
+    <p class="text-lg font-bold text-blue-600">Balance: <span id="balance">₦0.00</span></p>
+  </div>
+
+  <!-- Menu -->
+  <div class="mt-4">
+    <!-- How to Play (Dropdown) -->
+    <div class="bg-white border-b">
+      <button id="howToPlayBtn" class="w-full flex justify-between items-center px-4 py-3 text-gray-700 hover:bg-gray-100">
+        <span class="flex items-center"><i data-feather="help-circle" class="mr-2 w-5 h-5"></i> How to Play</span>
+        <i id="chevronIcon" data-feather="chevron-down" class="w-5 h-5"></i>
+      </button>
+      <div id="howToPlayContent" class="hidden px-6 py-4 text-sm text-gray-600 bg-gray-50">
+        Select 10 Premier League matches, choose your predictions, and place your bet for just ₦100. Once submitted, your ticket is saved and awaits the results. Boom — done!
       </div>
-      <h3 id="username" class="text-xl font-bold">Loading...</h3>
-      <p class="text-gray-500 mb-2">Member</p>
-      <p class="text-lg font-bold text-blue-600">Balance: <span id="balance">₦0.00</span></p>
     </div>
 
-    <!-- Menu Section -->
-    <div class="bg-white rounded-xl p-4 mb-6 shadow-md divide-y divide-gray-200 text-sm" data-aos="fade-up">
-      <a href="#" class="flex justify-between items-center py-3">
-        <span class="flex items-center"><i data-feather="bell" class="w-4 h-4 mr-2"></i> Notification Center</span>
-        <i data-feather="chevron-right" class="w-4 h-4"></i>
-      </a>
-      <a href="#" class="flex justify-between items-center py-3">
-        <span class="flex items-center"><i data-feather="help-circle" class="w-4 h-4 mr-2"></i> How to Play</span>
-        <i data-feather="chevron-right" class="w-4 h-4"></i>
-      </a>
-      <a href="#" class="flex justify-between items-center py-3">
-        <span class="flex items-center"><i data-feather="message-circle" class="w-4 h-4 mr-2"></i> Share an Idea</span>
-        <i data-feather="chevron-right" class="w-4 h-4"></i>
-      </a>
-      <a href="#" class="flex justify-between items-center py-3">
-        <span class="flex items-center"><i data-feather="refresh-cw" class="w-4 h-4 mr-2"></i> Update App</span>
-        <i data-feather="chevron-right" class="w-4 h-4"></i>
-      </a>
-    </div>
+    <!-- Update App -->
+    <a href="https://premierpredict.onrender.com" class="block bg-white border-b px-4 py-3 text-gray-700 hover:bg-gray-100 flex items-center">
+      <i data-feather="refresh-ccw" class="mr-2 w-5 h-5"></i> Update App
+    </a>
+  </div>
 
-    <!-- Logout -->
+  <!-- Footer -->
+  <footer class="mt-6 text-center text-xs text-gray-500 px-4">
+    <p>© 2025 PremierPredict. All rights reserved.</p>
+    <p class="mt-2">Age 18 and above only. Play responsibly.</p>
+    <div class="mt-2">
+      <a href="#" class="hover:underline">Terms & Conditions</a> | 
+      <a href="#" class="hover:underline">About Us</a>
+    </div>
+  </footer>
+
+  <!-- Logout Button -->
+  <div class="px-4 mt-6">
     <button id="logoutBtn" class="w-full bg-red-500 hover:bg-red-600 text-white py-3 rounded-lg font-medium transition">
       Logout
     </button>
-
-    <!-- Footer -->
-    <div class="text-center text-xs text-gray-500 mt-6">
-      <p>© 2025 PremierPredict. All rights reserved.</p>
-      <p class="mt-2">Age 18+ only. Play responsibly. Betting can be addictive.</p>
-      <div class="mt-2">
-        <a href="#" class="underline">Terms & Conditions</a> | 
-        <a href="#" class="underline">About Us</a>
-      </div>
-    </div>
   </div>
 
   <!-- Bottom Navigation -->
@@ -114,11 +125,11 @@
     const API_URL = "https://premierpredict.onrender.com/api";
     const getToken = () => localStorage.getItem("token");
 
-    const logout = () => {
+    // Logout
+    document.getElementById("logoutBtn").addEventListener("click", () => {
       localStorage.removeItem("token");
       window.location.href = "index.html";
-    };
-    document.getElementById("logoutBtn").addEventListener("click", logout);
+    });
 
     const formatMoney = (amount) =>
       "₦" + Number(amount).toLocaleString("en-NG", { minimumFractionDigits: 2 });
@@ -135,20 +146,32 @@
           headers: { Authorization: `Bearer ${token}` }
         });
         if (!res.ok) throw new Error("Bad response from server");
-
         const data = await res.json();
-        const username = data.user?.username || "User";
 
+        const username = data.user?.username || "User";
         document.getElementById("username").innerText = username;
         document.getElementById("balance").innerText = formatMoney(data.balance || 0);
         document.getElementById("avatar").innerText = username.charAt(0).toUpperCase();
       } catch (err) {
         console.error("❌ Profile fetch error:", err);
-        alert("❌ Error fetching profile data");
+        alert("❌ Error loading profile data");
       }
     }
-
     loadProfile();
+
+    // Dropdown for How to Play
+    document.getElementById("howToPlayBtn").addEventListener("click", () => {
+      const content = document.getElementById("howToPlayContent");
+      const icon = document.getElementById("chevronIcon");
+      if (content.classList.contains("hidden")) {
+        content.classList.remove("hidden");
+        icon.setAttribute("data-feather", "chevron-up");
+      } else {
+        content.classList.add("hidden");
+        icon.setAttribute("data-feather", "chevron-down");
+      }
+      feather.replace();
+    });
   </script>
 </body>
-                                          </html>
+    </html>
