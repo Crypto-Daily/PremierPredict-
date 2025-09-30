@@ -35,7 +35,7 @@
     }
     .nav-btn.active,
     .nav-btn:hover {
-      color: #2563eb;
+      color: #2563eb; /* blue active */
     }
   </style>
 </head>
@@ -47,30 +47,28 @@
         <i data-feather="award" class="w-6 h-6 text-blue-600"></i>
         <h1 class="text-2xl font-bold text-blue-600">PremierPredict</h1>
       </div>
-      <div class="flex items-center space-x-4">
-        <a href="settings.html">
-          <i data-feather="settings" class="w-6 h-6 text-gray-600 hover:text-blue-600 cursor-pointer"></i>
-        </a>
-        <button id="logoutBtn" class="text-sm text-red-500 hover:underline">Logout</button>
-      </div>
+      <a href="settings.html">
+        <i data-feather="settings" class="w-6 h-6 text-gray-600 hover:text-blue-600 cursor-pointer"></i>
+      </a>
     </header>
-
-    <!-- Welcome Banner -->
-    <div class="wallet-card rounded-xl p-6 mb-6 shadow-md" data-aos="fade-up">
-      <h2 class="text-lg font-semibold">Welcome back, <span id="welcomeUser">User</span>!</h2>
-      <p class="text-gray-500">Check your stats below.</p>
-    </div>
 
     <!-- Profile Card -->
     <div class="wallet-card rounded-xl p-6 mb-6 shadow-md text-center" data-aos="fade-up">
-      <img src="http://static.photos/people/120x120/1" alt="User" class="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-blue-500">
+      <div class="relative w-28 h-28 mx-auto mb-4">
+        <img id="profilePic" src="http://static.photos/people/120x120/1"
+          alt="User" class="w-28 h-28 rounded-full border-4 border-blue-500 object-cover">
+        <label for="profileUpload" class="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer">
+          <i data-feather="camera" class="w-4 h-4"></i>
+        </label>
+        <input type="file" id="profileUpload" accept="image/*" class="hidden"/>
+      </div>
       <h3 id="username" class="text-xl font-bold">Loading...</h3>
       <p class="text-gray-500 mb-2">Member</p>
       <p class="text-lg font-bold text-blue-600">Balance: <span id="balance">₦0.00</span></p>
     </div>
 
     <!-- Quick Stats -->
-    <div class="wallet-card rounded-xl p-6 shadow-md" data-aos="fade-up">
+    <div class="wallet-card rounded-xl p-6 mb-6 shadow-md" data-aos="fade-up">
       <h3 class="font-bold text-lg mb-4 flex items-center">
         <i data-feather="bar-chart-2" class="mr-2 w-5 h-5"></i> Quick Stats
       </h3>
@@ -80,6 +78,29 @@
         <div class="flex justify-between"><span>Losses</span><span id="losses" class="text-red-500">0</span></div>
         <div class="flex justify-between"><span>Win Rate</span><span id="winRate">0%</span></div>
       </div>
+    </div>
+
+    <!-- Customer Care -->
+    <div class="wallet-card rounded-xl p-6 shadow-md" data-aos="fade-up">
+      <h3 class="font-bold text-lg mb-4 flex items-center">
+        <i data-feather="headphones" class="mr-2 w-5 h-5"></i> Customer Care
+      </h3>
+      <p class="text-gray-600 text-sm mb-3">Need help? Reach us anytime.</p>
+      <a href="mailto:support@premierpredict.com"
+         class="block w-full bg-blue-600 hover:bg-blue-700 text-white text-center py-3 rounded-lg font-medium transition">
+        Email Support
+      </a>
+      <a href="tel:+2348000000000"
+         class="block w-full bg-green-600 hover:bg-green-700 text-white text-center py-3 rounded-lg font-medium transition mt-3">
+        Call Support
+      </a>
+    </div>
+
+    <!-- Logout -->
+    <div class="mt-8">
+      <button id="logoutBtn" class="w-full bg-red-500 hover:bg-red-600 text-white py-3 rounded-lg font-medium transition">
+        Logout
+      </button>
     </div>
   </div>
 
@@ -108,6 +129,9 @@
   </nav>
 
   <script>
+    AOS.init();
+    feather.replace();
+
     const API_URL = "https://premierpredict.onrender.com/api";
     const getToken = () => localStorage.getItem("token");
 
@@ -120,7 +144,6 @@
     const formatMoney = (amount) =>
       "₦" + Number(amount).toLocaleString("en-NG", { minimumFractionDigits: 2 });
 
-    // Load Dashboard
     async function loadDashboard() {
       const token = getToken();
       if (!token) {
@@ -137,27 +160,33 @@
 
         const data = await res.json();
 
-        // Profile + Welcome
+        // Profile
         document.getElementById("username").innerText = data.user?.username || "User";
-        document.getElementById("welcomeUser").innerText = data.user?.username || "User";
         document.getElementById("balance").innerText = formatMoney(data.balance || 0);
-
-        // Quick stats
         document.getElementById("totalBets").innerText = data.totalBets || 0;
         document.getElementById("wins").innerText = data.wins || 0;
         document.getElementById("losses").innerText = data.losses || 0;
         document.getElementById("winRate").innerText =
           data.totalBets > 0 ? ((data.wins / data.totalBets) * 100).toFixed(1) + "%" : "0%";
-
       } catch (err) {
         console.error("❌ Dashboard fetch error:", err);
         alert("❌ Error fetching dashboard data");
       }
     }
 
-    AOS.init({ duration: 800, easing: "ease-in-out", once: true });
-    feather.replace();
+    // Profile Picture Upload (local preview only)
+    document.getElementById("profileUpload").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          document.getElementById("profilePic").src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
     loadDashboard();
   </script>
 </body>
-</html>
+  </html>
