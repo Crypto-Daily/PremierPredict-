@@ -26,6 +26,7 @@
       padding: 2rem;
       border-radius: var(--radius);
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      position: relative;
     }
 
     h2 {
@@ -77,11 +78,40 @@
       text-decoration: none;
       font-weight: bold;
     }
+
+    /* Spinner */
+    #spinner {
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      display: none;
+      border-radius: var(--radius);
+    }
+    #spinner div {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
   </style>
 </head>
 <body>
 
   <div class="container">
+    <!-- Spinner -->
+    <div id="spinner"><div></div></div>
+
     <h2>Login</h2>
     <input type="email" id="email" placeholder="Email" required>
     <input type="password" id="password" placeholder="Password" required>
@@ -95,6 +125,9 @@
 
   <script>
     const API_URL = "https://premierpredict.onrender.com/api";
+    const spinner = document.getElementById("spinner");
+    const showSpinner = () => spinner.style.display = "flex";
+    const hideSpinner = () => spinner.style.display = "none";
 
     document.getElementById("loginBtn").addEventListener("click", async () => {
       const email = document.getElementById("email").value.trim();
@@ -107,6 +140,7 @@
       }
 
       try {
+        showSpinner();
         const res = await fetch(`${API_URL}/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -125,6 +159,8 @@
       } catch (err) {
         console.error(err);
         errorMsg.textContent = "❌ Error connecting to server.";
+      } finally {
+        hideSpinner();
       }
     });
   </script>
