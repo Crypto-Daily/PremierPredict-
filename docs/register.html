@@ -6,15 +6,43 @@
   <title>Register - PremierPredict</title>
   <style>
     body { font-family: Arial, sans-serif; padding: 2rem; background: #f5f5f5; }
-    form { max-width: 400px; margin: auto; background: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    form { max-width: 400px; margin: auto; background: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); position: relative; }
     input { width: 100%; padding: 0.5rem; margin: 0.5rem 0; }
     button { padding: 0.5rem 1rem; margin-top: 1rem; cursor: pointer; }
+
+    /* Spinner */
+    #spinner {
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      display: none;
+      border-radius: 8px;
+    }
+    #spinner div {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #007bff;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
 
   <h2>Register</h2>
   <form id="registerForm">
+    <!-- Spinner -->
+    <div id="spinner"><div></div></div>
+
     <input type="text" id="username" placeholder="Username" required>
     <input type="email" id="email" placeholder="Email" required>
     <input type="password" id="password" placeholder="Password" required>
@@ -24,6 +52,9 @@
 
   <script>
     const API_URL = "https://premierpredict.onrender.com/api";
+    const spinner = document.getElementById("spinner");
+    const showSpinner = () => spinner.style.display = "flex";
+    const hideSpinner = () => spinner.style.display = "none";
 
     document.getElementById("registerForm").addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -32,6 +63,7 @@
       const password = document.getElementById("password").value;
 
       try {
+        showSpinner();
         const res = await fetch(`${API_URL}/auth/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -49,6 +81,8 @@
       } catch (err) {
         alert("⚠️ Error connecting to server!");
         console.error(err);
+      } finally {
+        hideSpinner();
       }
     });
   </script>
