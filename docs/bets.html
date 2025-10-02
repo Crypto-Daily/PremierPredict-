@@ -74,79 +74,92 @@
     <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
   </div>
 
-  <script>
-    AOS.init(); feather.replace();
+<script>
+  AOS.init(); feather.replace();
 
-    const API_URL = "https://premierpredict.onrender.com/api";
-    const getToken = () => localStorage.getItem("token");
+  const API_URL = "https://premierpredict.onrender.com/api";
+  const getToken = () => localStorage.getItem("token");
 
-    const spinner=document.getElementById("spinner");
-    const showSpinner=()=>spinner.classList.remove("hidden");
-    const hideSpinner=()=>spinner.classList.add("hidden");
-    const formatMoney=n=>"₦"+Number(n).toLocaleString("en-NG",{minimumFractionDigits:2});
+  const spinner=document.getElementById("spinner");
+  const showSpinner=()=>spinner.classList.remove("hidden");
+  const hideSpinner=()=>spinner.classList.add("hidden");
+  const formatMoney=n=>"₦"+Number(n).toLocaleString("en-NG",{minimumFractionDigits:2});
 
-    async function loadBalance(){
-      try{
-        const res=await fetch(`${API_URL}/wallet/balance`,{headers:{Authorization:"Bearer "+getToken()}});
-        const data=await res.json();
-        document.getElementById("balanceBox").innerText=formatMoney(data.balance||0);
-      }catch(err){console.error(err);}
-    }
+  async function loadBalance(){
+    try{
+      const res=await fetch(`${API_URL}/wallet/balance`,{headers:{Authorization:"Bearer "+getToken()}});
+      const data=await res.json();
+      document.getElementById("balanceBox").innerText=formatMoney(data.balance||0);
+    }catch(err){console.error(err);}
+  }
 
-    function getTicketStatus(selections){
-      if(selections.some(s=>s.result==="lost")) return {text:"LOSS",color:"text-red-600"};
-      if(selections.some(s=>!s.result || s.result==="pending")) return {text:"PENDING",color:"text-yellow-600"};
-      return {text:"WON",color:"text-green-600"};
-    }
-
-    async function loadTickets(){
-      showSpinner();
-      try{
-        const res=await fetch(`${API_URL}/jackpot/tickets`,{headers:{Authorization:"Bearer "+getToken()}});
-        const data=await res.json();
-        hideSpinner();
-
-        const ticketsDiv=document.getElementById("tickets");
-        if(!data.tickets||!data.tickets.length){ticketsDiv.innerHTML="<p>No tickets yet</p>";return;}
-
-        ticketsDiv.innerHTML=data.tickets.map(t=>{
-          const status=getTicketStatus(t.selections||[]);
-          return `
-            <div class="ticket-card border rounded-lg bg-white shadow overflow-hidden">
-              <button onclick="toggleTicket(${t.id})" class="w-full flex justify-between items-center px-4 py-3 text-left">
-                <span><b>Ticket #${t.id}</b> — Round ${t.round_id}</span>
-                <span class="${status.color} font-bold">${status.text}</span>
-              </button>
-              <div id="ticket-${t.id}" class="hidden border-t bg-gray-50 px-4 py-3 text-sm relative">
-                ${status.text==="WON"?'<div class="watermark text-green-600">WON</div>':''}
-                ${(t.selections||[]).map(s=>`
-                  <div class="mb-2 p-2 bg-white rounded border">
-                    <p class="font-medium">${s.match_name||s.match_id}</p>
-                    <p>Pick = ${s.selection}</p>
-                    <p>Outcome = ${s.result||"pending"}</p>
-                  </div>
-                `).join("")}
-              </div>
-            </div>
-          `;
-        }).join("");
-      }catch(err){
-        hideSpinner();
-        console.error(err);
-        alert("❌ Error loading tickets");
+  function getTicketStatus(selections){
+    let hasLoss=false, hasPending=false, winCount=0;
+    for(const s of selections){
+      if(!s.result || s.result==="pending"){
+        hasPending=true;
+      } else if(s.result !== s.selection){ // pick vs outcome
+        hasLoss=true;
+      } else if(s.result === s.selection){
+        winCount++;
       }
     }
+    if(hasLoss) return {text:"LOSS",color:"text-red-600"};
+    if(hasPending) return {text:"PENDING",color:"text-yellow-600"};
+    return {text:"WON",color:"text-green-600"};
+  }
 
-    function toggleTicket(id){
-      const div=document.getElementById("ticket-"+id);
-      div.classList.toggle("hidden");
+  async function loadTickets(){
+    showSpinner();
+    try{
+      const res=await fetch(`${API_URL}/jackpot/tickets`,{headers:{Authorization:"Bearer "+getToken()}});
+      const data=await res.json();
+      hideSpinner();
+
+      const ticketsDiv=document.getElementById("tickets");
+      if(!data.tickets||!data.tickets.length){ticketsDiv.innerHTML="<p>No tickets yet</p>";return;}
+
+      ticketsDiv.innerHTML=data.tickets.map(t=>{
+        const status=getTicketStatus(t.selections||[]);
+        return `
+          <div class="ticket-card border rounded-lg bg-white shadow overflow-hidden">
+            <button onclick="toggleTicket(${t.id})" class="w-full flex justify-between items-center px-4 py-3 text-left">
+              <span><b>Ticket #${t.id}</b> — Round ${t.round_id}</span>
+              <span class="${status.color} font-bold">${status.text}</span>
+            </button>
+            <div id="ticket-${t.id}" class="hidden border-t bg-gray-50 px-4 py-3 text-sm relative">
+              ${status.text==="WON"?'<div class="watermark text-green-600">WON</div>':''}
+              ${(t.selections||[]).map(s=>`
+                <div class="mb-2 p-2 bg-white rounded border">
+                  <p class="font-medium">${s.home_team} vs ${s.away_team}</p>
+                  <p>Pick = ${s.selection}</p>
+                  <p>Outcome = ${s.result||"pending"}</p>
+                  <p class="${s.result && s.result!==s.selection ? 'text-red-600 font-bold':'text-green-600'}">
+                    ${s.result ? (s.result===s.selection ? '✔ Correct' : '✘ Wrong') : 'Awaiting'}
+                  </p>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        `;
+      }).join("");
+    }catch(err){
+      hideSpinner();
+      console.error(err);
+      alert("❌ Error loading tickets");
     }
+  }
 
-    (async()=>{
-      if(!getToken()){location.href="index.html";return;}
-      await loadBalance();
-      await loadTickets();
-    })();
-  </script>
+  function toggleTicket(id){
+    const div=document.getElementById("ticket-"+id);
+    div.classList.toggle("hidden");
+  }
+
+  (async()=>{
+    if(!getToken()){location.href="index.html";return;}
+    await loadBalance();
+    await loadTickets();
+  })();
+</script>
 </body>
       </html>
