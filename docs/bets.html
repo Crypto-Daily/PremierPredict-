@@ -9,33 +9,21 @@
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
   <style>
-    .wallet-card {
-      background: #ffffff;
-      border: 1px solid rgba(229, 231, 235, 0.8);
-    }
+    .wallet-card { background:#fff; border:1px solid rgba(229,231,235,0.8);}
     .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: #ffffff;
-      border-top: 1px solid #e5e7eb;
-      display: flex;
-      justify-content: space-around;
-      padding: 0.6rem 0;
-      z-index: 50;
+      position:fixed; bottom:0; left:0; right:0;
+      background:#fff; border-top:1px solid #e5e7eb;
+      display:flex; justify-content:space-around;
+      padding:0.6rem 0; z-index:50;
     }
-    .nav-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      font-size: 0.75rem;
-      color: #6b7280;
-      transition: all 0.2s;
-    }
-    .nav-btn.active,
-    .nav-btn:hover {
-      color: #2563eb; /* blue active */
+    .nav-btn { display:flex; flex-direction:column; align-items:center;
+      font-size:0.75rem; color:#6b7280; transition:all 0.2s;}
+    .nav-btn.active, .nav-btn:hover { color:#2563eb; }
+    .ticket-card { position:relative; }
+    .watermark {
+      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-20deg);
+      font-size:2rem; font-weight:800; opacity:0.1;
+      white-space:nowrap; pointer-events:none;
     }
   </style>
 </head>
@@ -51,15 +39,9 @@
     </header>
 
     <!-- Active Tickets -->
-    <div class="wallet-card rounded-xl p-6 mb-6 shadow-md" data-aos="fade-up">
-      <h2 class="text-lg font-semibold mb-4">Active Tickets</h2>
+    <div class="wallet-card rounded-xl p-4 mb-6 shadow-md" data-aos="fade-up">
+      <h2 class="text-lg font-semibold mb-4">My Tickets</h2>
       <div id="tickets" class="space-y-3 text-sm">Loading...</div>
-    </div>
-
-    <!-- Ticket History -->
-    <div class="wallet-card rounded-xl p-6 shadow-md" data-aos="fade-up">
-      <h2 class="text-lg font-semibold mb-4">Ticket History</h2>
-      <div id="history" class="space-y-3 text-sm">Loading...</div>
     </div>
   </div>
 
@@ -93,77 +75,78 @@
   </div>
 
   <script>
-    AOS.init();
-    feather.replace();
+    AOS.init(); feather.replace();
 
     const API_URL = "https://premierpredict.onrender.com/api";
     const getToken = () => localStorage.getItem("token");
 
-    const spinner = document.getElementById("spinner");
-    const showSpinner = () => spinner.classList.remove("hidden");
-    const hideSpinner = () => spinner.classList.add("hidden");
-
-    const formatMoney = (n) => "₦" + Number(n).toLocaleString("en-NG",{minimumFractionDigits:2});
+    const spinner=document.getElementById("spinner");
+    const showSpinner=()=>spinner.classList.remove("hidden");
+    const hideSpinner=()=>spinner.classList.add("hidden");
+    const formatMoney=n=>"₦"+Number(n).toLocaleString("en-NG",{minimumFractionDigits:2});
 
     async function loadBalance(){
-      try {
-        const res = await fetch(`${API_URL}/wallet/balance`, { headers:{Authorization:"Bearer "+getToken()} });
-        const data = await res.json();
-        document.getElementById("balanceBox").innerText = formatMoney(data.balance||0);
-      } catch (err) {
-        console.error(err);
-      }
+      try{
+        const res=await fetch(`${API_URL}/wallet/balance`,{headers:{Authorization:"Bearer "+getToken()}});
+        const data=await res.json();
+        document.getElementById("balanceBox").innerText=formatMoney(data.balance||0);
+      }catch(err){console.error(err);}
+    }
+
+    function getTicketStatus(selections){
+      if(selections.some(s=>s.result==="lost")) return {text:"LOSS",color:"text-red-600"};
+      if(selections.some(s=>!s.result || s.result==="pending")) return {text:"PENDING",color:"text-yellow-600"};
+      return {text:"WON",color:"text-green-600"};
     }
 
     async function loadTickets(){
       showSpinner();
-      try {
-        const res = await fetch(`${API_URL}/jackpot/tickets`, { headers:{Authorization:"Bearer "+getToken()} });
-        const data = await res.json();
+      try{
+        const res=await fetch(`${API_URL}/jackpot/tickets`,{headers:{Authorization:"Bearer "+getToken()}});
+        const data=await res.json();
         hideSpinner();
 
-        const ticketsDiv = document.getElementById("tickets");
-        const historyDiv = document.getElementById("history");
+        const ticketsDiv=document.getElementById("tickets");
+        if(!data.tickets||!data.tickets.length){ticketsDiv.innerHTML="<p>No tickets yet</p>";return;}
 
-        if(!data.tickets || !data.tickets.length){
-          ticketsDiv.innerHTML = "<p>No tickets</p>";
-          historyDiv.innerHTML = "<p>No history</p>";
-          return;
-        }
-
-        ticketsDiv.innerHTML = data.tickets
-          .filter(t=>!t.status || t.status==="pending")
-          .map(t=>`
-            <div class="p-4 border rounded bg-white shadow">
-              <b>Ticket #${t.id}</b> — Round ${t.round_id}
-              <ul class="mt-2 text-sm list-disc pl-4">
-                ${t.selections.map(s=>`<li>${s.match_id}: ${s.selection} → ${s.result||"pending"}</li>`).join("")}
-              </ul>
+        ticketsDiv.innerHTML=data.tickets.map(t=>{
+          const status=getTicketStatus(t.selections||[]);
+          return `
+            <div class="ticket-card border rounded-lg bg-white shadow overflow-hidden">
+              <button onclick="toggleTicket(${t.id})" class="w-full flex justify-between items-center px-4 py-3 text-left">
+                <span><b>Ticket #${t.id}</b> — Round ${t.round_id}</span>
+                <span class="${status.color} font-bold">${status.text}</span>
+              </button>
+              <div id="ticket-${t.id}" class="hidden border-t bg-gray-50 px-4 py-3 text-sm relative">
+                ${status.text==="WON"?'<div class="watermark text-green-600">WON</div>':''}
+                ${(t.selections||[]).map(s=>`
+                  <div class="mb-2 p-2 bg-white rounded border">
+                    <p class="font-medium">${s.match_name||s.match_id}</p>
+                    <p>Pick = ${s.selection}</p>
+                    <p>Outcome = ${s.result||"pending"}</p>
+                  </div>
+                `).join("")}
+              </div>
             </div>
-          `).join("");
-
-        historyDiv.innerHTML = data.tickets
-          .filter(t=>t.status==="won"||t.status==="lost")
-          .map(t=>`
-            <div class="p-4 border rounded bg-gray-50">
-              <b>Ticket #${t.id}</b> — <span class="${t.status==="won"?"text-green-600":"text-red-600"} font-semibold">${t.status.toUpperCase()}</span>
-              <ul class="mt-2 text-sm list-disc pl-4">
-                ${t.selections.map(s=>`<li>${s.match_id}: ${s.selection} → ${s.result||"pending"}</li>`).join("")}
-              </ul>
-            </div>
-          `).join("");
-      } catch (err) {
+          `;
+        }).join("");
+      }catch(err){
         hideSpinner();
         console.error(err);
         alert("❌ Error loading tickets");
       }
     }
 
+    function toggleTicket(id){
+      const div=document.getElementById("ticket-"+id);
+      div.classList.toggle("hidden");
+    }
+
     (async()=>{
-      if(!getToken()){ location.href="index.html"; return; }
+      if(!getToken()){location.href="index.html";return;}
       await loadBalance();
       await loadTickets();
     })();
   </script>
 </body>
-</html>
+      </html>
