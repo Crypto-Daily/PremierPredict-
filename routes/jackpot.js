@@ -157,7 +157,10 @@ router.get("/tickets", authMiddleware, async (req, res) => {
                  json_build_object(
                    'match_id', s.match_id,
                    'selection', s.selection,
-                   'result', jm.result
+                   'result', jm.result,
+                   'home_team', jm.home_team,
+                   'away_team', jm.away_team,
+                   'match_time', jm.match_time
                  ) ORDER BY s.match_id
                ) FILTER (WHERE s.match_id IS NOT NULL), '[]'
              ) AS selections
