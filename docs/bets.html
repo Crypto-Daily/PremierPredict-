@@ -3,28 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <title>Bets | PremierPredict</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">  
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
   <style>
-    .wallet-card { background:#fff; border:1px solid rgba(229,231,235,0.8);}
-    .bottom-nav {
-      position:fixed; bottom:0; left:0; right:0;
-      background:#fff; border-top:1px solid #e5e7eb;
-      display:flex; justify-content:space-around;
-      padding:0.6rem 0; z-index:50;
-    }
-    .nav-btn { display:flex; flex-direction:column; align-items:center;
-      font-size:0.75rem; color:#6b7280; transition:all 0.2s;}
-    .nav-btn.active, .nav-btn:hover { color:#2563eb; }
-    .ticket-card { position:relative; }
-    .watermark {
-      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-20deg);
-      font-size:2rem; font-weight:800; opacity:0.1;
-      white-space:nowrap; pointer-events:none;
-    }
+    .wallet-card { background:#fff; border:1px solid rgba(229,231,235,0.8);}  
+    .bottom-nav {position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid #e5e7eb; display:flex; justify-content:space-around; padding:0.6rem 0; z-index:50;}  
+    .nav-btn { display:flex; flex-direction:column; align-items:center; font-size:0.75rem; color:#6b7280; transition:all 0.2s;}  
+    .nav-btn.active, .nav-btn:hover { color:#2563eb; }  
+    .ticket-card { position:relative; }  
+    .watermark { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-20deg); font-size:2rem; font-weight:800; opacity:0.1; white-space:nowrap; pointer-events:none; }  
+    .icon-circle { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; font-size:0.8rem; font-weight:bold; }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen text-gray-800 pb-20">
@@ -94,14 +85,12 @@
   }
 
   function getTicketStatus(selections){
-    let hasLoss=false, hasPending=false, winCount=0;
+    let hasLoss=false, hasPending=false;
     for(const s of selections){
-      if(!s.result || s.result==="pending"){
+      if(!s.result || s.result==="pending" || s.result==="not started"){
         hasPending=true;
-      } else if(s.result !== s.selection){ // pick vs outcome
+      } else if(s.result !== s.selection){
         hasLoss=true;
-      } else if(s.result === s.selection){
-        winCount++;
       }
     }
     if(hasLoss) return {text:"LOSS",color:"text-red-600"};
@@ -124,21 +113,32 @@
         return `
           <div class="ticket-card border rounded-lg bg-white shadow overflow-hidden">
             <button onclick="toggleTicket(${t.id})" class="w-full flex justify-between items-center px-4 py-3 text-left">
-              <span><b>Ticket #${t.id}</b> — Round ${t.round_id}</span>
+              <span><b>Ticket #${t.id}</b> — ${t.round_name||("Round "+t.round_id)}</span>
               <span class="${status.color} font-bold">${status.text}</span>
             </button>
             <div id="ticket-${t.id}" class="hidden border-t bg-gray-50 px-4 py-3 text-sm relative">
               ${status.text==="WON"?'<div class="watermark text-green-600">WON</div>':''}
-              ${(t.selections||[]).map(s=>`
-                <div class="mb-2 p-2 bg-white rounded border">
-                  <p class="font-medium">${s.home_team} vs ${s.away_team}</p>
-                  <p>Pick = ${s.selection}</p>
-                  <p>Outcome = ${s.result||"pending"}</p>
-                  <p class="${s.result && s.result!==s.selection ? 'text-red-600 font-bold':'text-green-600'}">
-                    ${s.result ? (s.result===s.selection ? '✔ Correct' : '✘ Wrong') : 'Awaiting'}
-                  </p>
-                </div>
-              `).join("")}
+              ${(t.selections||[]).map(s=>{
+                let outcomeText="", verdict="";
+                if(!s.result || s.result==="pending"){
+                  outcomeText="Not Started";
+                  verdict='<span class="icon-circle bg-yellow-200 text-yellow-700">-</span> Pending';
+                } else if(s.result === s.selection){
+                  outcomeText=s.result;
+                  verdict='<span class="icon-circle bg-green-200 text-green-700">✔</span>';
+                } else {
+                  outcomeText=s.result;
+                  verdict='<span class="icon-circle bg-red-200 text-red-700">✘</span>';
+                }
+                return `
+                  <div class="mb-2 p-2 bg-white rounded border">
+                    <p class="font-medium">${s.home_team} vs ${s.away_team}</p>
+                    <p>Pick = ${s.selection}</p>
+                    <p>Outcome = ${outcomeText}</p>
+                    <p>${verdict}</p>
+                  </div>
+                `;
+              }).join("")}
             </div>
           </div>
         `;
@@ -162,4 +162,4 @@
   })();
 </script>
 </body>
-      </html>
+</html>
