@@ -9,12 +9,14 @@ import walletRoutes from "./routes/wallet.js";
 import jackpotRoutes from "./routes/jackpot.js";
 import { authMiddleware } from "./middleware/authMiddleware.js";
 import dashboardRoutes from "./routes/dashboard.js";
+import withdrawalsRouter from "./routes/withdrawals.js";
 
 dotenv.config();
 
 const app = express();
 // ✅ Middleware
 app.use(express.json());
+app.use("/api/withdrawals", withdrawalsRouter);
 
 // ✅ Enable CORS for frontend requests
 app.use(
