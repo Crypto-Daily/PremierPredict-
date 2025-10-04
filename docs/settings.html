@@ -5,15 +5,52 @@
   <title>Withdraw | PremierPredict</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+  <style>
+    /* Spinner */
+    #spinner {
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      display: none;
+    }
+    #spinner div {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #2563eb;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
-  <div class="max-w-md mx-auto p-6 mt-10 bg-white rounded-2xl shadow">
-    <h1 class="text-2xl font-bold text-center mb-4 text-blue-600">Withdraw Funds</h1>
 
+  <!-- Spinner -->
+  <div id="spinner"><div></div></div>
+
+  <!-- Header -->
+  <header class="flex items-center justify-between p-4 bg-white shadow">
+    <button onclick="window.location.href='wallet.html'" class="flex items-center text-blue-600 font-semibold">
+      <i data-feather="arrow-left" class="w-5 h-5 mr-2"></i> Back
+    </button>
+    <h1 class="text-lg font-bold text-blue-600">Withdraw Funds</h1>
+    <div class="w-5"></div>
+  </header>
+
+  <div class="max-w-md mx-auto p-6 mt-6 bg-white rounded-2xl shadow">
     <!-- User Info -->
     <div id="user-info" class="text-center mb-6">
       <p class="font-semibold text-gray-700">Welcome, <span id="username">...</span></p>
-      <p class="text-gray-600">Balance: ₦<span id="balance">0.00</span></p>
+      <p class="text-gray-600">Balance: <span id="balance">₦0.00</span></p>
     </div>
 
     <!-- Withdraw Form -->
@@ -57,35 +94,49 @@
   </div>
 
   <script>
+    feather.replace();
+
+    const spinner = document.getElementById("spinner");
+    const showSpinner = () => spinner.style.display = "flex";
+    const hideSpinner = () => spinner.style.display = "none";
+
+    const API_URL = "https://premierpredict.onrender.com/api";
     const token = localStorage.getItem('token');
+
     if (!token) {
-      window.location.href = '/login.html';
+      alert("⚠ Please login first.");
+      window.location.href = "index.html";
     }
 
+    const formatMoney = (amount) =>
+      "₦" + Number(amount).toLocaleString("en-NG", { minimumFractionDigits: 2 });
+
+    // ✅ Fetch user info same way as profile.html
     async function fetchUserData() {
       try {
-        const balanceRes = await fetch('/api/wallet/balance', {
-          headers: { Authorization: 'Bearer ' + token }
+        showSpinner();
+        const res = await fetch(`${API_URL}/dashboard`, {
+          headers: { Authorization: `Bearer ${token}` }
         });
-        const userRes = await fetch('/api/users/me', {
-          headers: { Authorization: 'Bearer ' + token }
-        });
+        if (!res.ok) throw new Error("Failed to load user data");
+        const data = await res.json();
 
-        const balanceData = await balanceRes.json();
-        const userData = await userRes.json();
-
-        document.getElementById('username').textContent = userData.username;
-        document.getElementById('balance').textContent = balanceData.balance.toFixed(2);
+        const username = data.user?.username || "User";
+        document.getElementById("username").textContent = username;
+        document.getElementById("balance").textContent = formatMoney(data.balance || 0);
       } catch (err) {
         console.error(err);
-        document.getElementById('msg').textContent = 'Error loading user data';
+        document.getElementById('msg').textContent = '❌ Error loading user data';
+      } finally {
+        hideSpinner();
       }
     }
 
+    // ✅ Fetch withdrawal history
     async function fetchHistory() {
       try {
-        const res = await fetch('/api/withdrawals/history', {
-          headers: { Authorization: 'Bearer ' + token }
+        const res = await fetch(`${API_URL}/withdrawals/history`, {
+          headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
 
@@ -112,38 +163,40 @@
       }
     }
 
+    // ✅ Handle withdrawal submission
     document.getElementById('withdraw-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const amount = parseFloat(document.getElementById('amount').value);
       const bank_name = document.getElementById('bank_name').value.trim();
       const account_number = document.getElementById('account_number').value.trim();
+      const account_name = document.getElementById('account_name').value.trim();
 
       const msg = document.getElementById('msg');
       msg.textContent = 'Submitting...';
 
       try {
-        const res = await fetch('/api/withdrawals', {
+        const res = await fetch(`${API_URL}/withdrawals`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: 'Bearer ' + token
+            Authorization: `Bearer ${token}`
           },
-          body: JSON.stringify({ amount, bank_name, account_number })
+          body: JSON.stringify({ amount, bank_name, account_number, account_name })
         });
 
         const data = await res.json();
-
         if (!res.ok) throw new Error(data.error || 'Failed to withdraw');
 
         msg.textContent = '✅ Withdrawal request submitted successfully';
         document.getElementById('withdraw-form').reset();
-        fetchHistory();
         fetchUserData();
+        fetchHistory();
       } catch (err) {
         msg.textContent = '❌ ' + err.message;
       }
     });
 
+    // Initialize
     fetchUserData();
     fetchHistory();
   </script>
