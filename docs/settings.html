@@ -2,201 +2,150 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Withdraw | PremierPredict</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-
 <body class="bg-gray-100 min-h-screen">
-  <!-- Header -->
-  <header class="bg-blue-600 text-white py-4 shadow">
-    <div class="container mx-auto px-4 flex justify-between items-center">
-      <h1 class="text-xl font-bold">PremierPredict</h1>
-      <span id="username" class="text-sm font-medium"></span>
-    </div>
-  </header>
+  <div class="max-w-md mx-auto p-6 mt-10 bg-white rounded-2xl shadow">
+    <h1 class="text-2xl font-bold text-center mb-4 text-blue-600">Withdraw Funds</h1>
 
-  <!-- Balance Section -->
-  <section class="container mx-auto mt-6 px-4">
-    <div class="bg-white rounded-xl shadow p-4 flex items-center justify-between">
+    <!-- User Info -->
+    <div id="user-info" class="text-center mb-6">
+      <p class="font-semibold text-gray-700">Welcome, <span id="username">...</span></p>
+      <p class="text-gray-600">Balance: ₦<span id="balance">0.00</span></p>
+    </div>
+
+    <!-- Withdraw Form -->
+    <form id="withdraw-form" class="space-y-3">
       <div>
-        <h2 class="text-gray-500 text-sm">Wallet Balance</h2>
-        <p id="balance" class="text-2xl font-bold text-gray-900 mt-1">₦0.00</p>
+        <label class="block text-sm font-semibold text-gray-700">Bank Name</label>
+        <input id="bank_name" type="text" required
+          class="w-full border rounded-lg px-3 py-2 mt-1 focus:outline-none focus:ring focus:ring-blue-300">
       </div>
       <div>
-        <button onclick="loadWallet()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-          Refresh
-        </button>
+        <label class="block text-sm font-semibold text-gray-700">Account Number</label>
+        <input id="account_number" type="text" required maxlength="10"
+          class="w-full border rounded-lg px-3 py-2 mt-1 focus:outline-none focus:ring focus:ring-blue-300">
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700">Account Name</label>
+        <input id="account_name" type="text" required
+          class="w-full border rounded-lg px-3 py-2 mt-1 focus:outline-none focus:ring focus:ring-blue-300">
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700">Amount (₦)</label>
+        <input id="amount" type="number" min="100" required
+          class="w-full border rounded-lg px-3 py-2 mt-1 focus:outline-none focus:ring focus:ring-blue-300">
+      </div>
+      <button type="submit"
+        class="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition">
+        Request Withdrawal
+      </button>
+    </form>
+
+    <!-- Message -->
+    <p id="msg" class="text-center text-sm mt-3 text-gray-700"></p>
+
+    <!-- History -->
+    <div class="mt-8">
+      <h2 class="text-lg font-semibold mb-2 text-gray-700">Withdrawal History</h2>
+      <div id="history" class="space-y-2 text-sm text-gray-700">
+        <p>Loading...</p>
       </div>
     </div>
-  </section>
-
-  <!-- Withdrawal Form -->
-  <section class="container mx-auto mt-6 px-4">
-    <div class="bg-white rounded-xl shadow p-5">
-      <h2 class="text-lg font-semibold mb-4">Withdraw Funds</h2>
-      <form id="withdrawForm" class="space-y-3">
-        <div>
-          <label class="block text-sm font-medium text-gray-600">Account Name</label>
-          <input type="text" id="account_name" required class="w-full border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-600">Bank Name</label>
-          <input type="text" id="bank_name" required class="w-full border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-600">Account Number</label>
-          <input type="text" id="account_number" maxlength="10" required class="w-full border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-600">Amount (₦)</label>
-          <input type="number" id="amount" min="100" step="100" required class="w-full border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
-        </div>
-
-        <button type="submit" class="bg-blue-600 text-white w-full py-2 rounded-lg font-semibold hover:bg-blue-700">
-          Withdraw Now
-        </button>
-      </form>
-    </div>
-  </section>
-
-  <!-- Withdrawal History -->
-  <section class="container mx-auto mt-8 px-4 pb-8">
-    <h2 class="text-lg font-semibold mb-3">Withdrawal History</h2>
-    <div class="bg-white rounded-xl shadow overflow-x-auto">
-      <table class="min-w-full text-sm text-left border">
-        <thead class="bg-gray-50 border-b">
-          <tr>
-            <th class="px-4 py-3">Date</th>
-            <th class="px-4 py-3">Amount</th>
-            <th class="px-4 py-3">Status</th>
-          </tr>
-        </thead>
-        <tbody id="historyBody" class="divide-y"></tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- Spinner -->
-  <div id="spinner" class="fixed inset-0 bg-white bg-opacity-60 flex items-center justify-center hidden z-50">
-    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
   </div>
 
   <script>
-    const API = "/api";
-    const spinner = document.getElementById("spinner");
-
-    const showSpinner = () => spinner.classList.remove("hidden");
-    const hideSpinner = () => spinner.classList.add("hidden");
-
-    function formatMoney(kobo) {
-      return "₦" + (kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2 });
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = '/login.html';
     }
 
-    async function loadWallet() {
-      showSpinner();
+    async function fetchUserData() {
       try {
-        const walletRes = await fetch(API + "/wallet", { headers: authHeader() });
-        const walletData = await walletRes.json();
-        document.getElementById("balance").textContent = formatMoney(walletData.balance_kobo);
+        const balanceRes = await fetch('/api/wallet/balance', {
+          headers: { Authorization: 'Bearer ' + token }
+        });
+        const userRes = await fetch('/api/users/me', {
+          headers: { Authorization: 'Bearer ' + token }
+        });
+
+        const balanceData = await balanceRes.json();
+        const userData = await userRes.json();
+
+        document.getElementById('username').textContent = userData.username;
+        document.getElementById('balance').textContent = balanceData.balance.toFixed(2);
       } catch (err) {
         console.error(err);
-        alert("Error loading wallet balance");
-      }
-      hideSpinner();
-    }
-
-    async function loadUser() {
-      try {
-        const res = await fetch(API + "/auth/me", { headers: authHeader() });
-        const data = await res.json();
-        document.getElementById("username").textContent = data.username || "User";
-      } catch (err) {
-        console.error("Error loading user:", err);
+        document.getElementById('msg').textContent = 'Error loading user data';
       }
     }
 
-    async function loadHistory() {
-      showSpinner();
+    async function fetchHistory() {
       try {
-        const res = await fetch(API + "/withdrawals", { headers: authHeader() });
-        const data = await res.json();
-        const body = document.getElementById("historyBody");
-
-        if (!Array.isArray(data) || data.length === 0) {
-          body.innerHTML = `<tr><td colspan="3" class="text-center py-5 text-gray-500">No withdrawals yet</td></tr>`;
-        } else {
-          body.innerHTML = data.map(w => `
-            <tr>
-              <td class="px-4 py-2">${new Date(w.created_at).toLocaleString()}</td>
-              <td class="px-4 py-2 font-semibold">${formatMoney(w.amount_kobo)}</td>
-              <td class="px-4 py-2">
-                <span class="px-2 py-1 rounded text-xs ${
-                  w.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                  w.status === 'paid' ? 'bg-green-100 text-green-700' :
-                  'bg-red-100 text-red-700'
-                }">${w.status}</span>
-              </td>
-            </tr>
-          `).join("");
-        }
-      } catch (err) {
-        console.error("Error loading history:", err);
-        alert("Could not load withdrawal history");
-      }
-      hideSpinner();
-    }
-
-    async function createWithdrawal(e) {
-      e.preventDefault();
-      showSpinner();
-
-      const amount = parseFloat(document.getElementById("amount").value);
-      const bank_name = document.getElementById("bank_name").value;
-      const account_number = document.getElementById("account_number").value;
-      const account_name = document.getElementById("account_name").value;
-
-      try {
-        const res = await fetch(API + "/withdrawals", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...authHeader()
-          },
-          body: JSON.stringify({ amount, bank_name, account_number, account_name })
+        const res = await fetch('/api/withdrawals/history', {
+          headers: { Authorization: 'Bearer ' + token }
         });
         const data = await res.json();
 
-        if (res.ok) {
-          alert("Withdrawal request submitted successfully!");
-          document.getElementById("withdrawForm").reset();
-          await loadWallet();
-          await loadHistory();
-        } else {
-          alert(data.error || "Failed to submit withdrawal");
+        const container = document.getElementById('history');
+        if (!Array.isArray(data) || data.length === 0) {
+          container.innerHTML = '<p class="text-gray-500">No withdrawals yet.</p>';
+          return;
         }
+
+        container.innerHTML = data.map(w => `
+          <div class="p-3 rounded-lg border">
+            <p>₦${(w.amount_kobo / 100).toFixed(2)} — ${w.bank_name}</p>
+            <p class="text-xs text-gray-500">${new Date(w.created_at).toLocaleString()}</p>
+            <p class="text-sm font-semibold ${
+              w.status === 'pending' ? 'text-yellow-600' :
+              w.status === 'paid' ? 'text-green-600' :
+              'text-red-600'
+            }">${w.status.toUpperCase()}</p>
+          </div>
+        `).join('');
       } catch (err) {
         console.error(err);
-        alert("Server error");
+        document.getElementById('history').innerHTML = '<p class="text-red-600">Error loading history</p>';
       }
-      hideSpinner();
     }
 
-    function authHeader() {
-      const token = localStorage.getItem("token");
-      return token ? { "Authorization": "Bearer " + token } : {};
-    }
+    document.getElementById('withdraw-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const amount = parseFloat(document.getElementById('amount').value);
+      const bank_name = document.getElementById('bank_name').value.trim();
+      const account_number = document.getElementById('account_number').value.trim();
 
-    document.getElementById("withdrawForm").addEventListener("submit", createWithdrawal);
+      const msg = document.getElementById('msg');
+      msg.textContent = 'Submitting...';
 
-    (async () => {
-      await loadUser();
-      await loadWallet();
-      await loadHistory();
-    })();
+      try {
+        const res = await fetch('/api/withdrawals', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + token
+          },
+          body: JSON.stringify({ amount, bank_name, account_number })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error || 'Failed to withdraw');
+
+        msg.textContent = '✅ Withdrawal request submitted successfully';
+        document.getElementById('withdraw-form').reset();
+        fetchHistory();
+        fetchUserData();
+      } catch (err) {
+        msg.textContent = '❌ ' + err.message;
+      }
+    });
+
+    fetchUserData();
+    fetchHistory();
   </script>
 </body>
-  </html>
+</html>
