@@ -3,45 +3,78 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Withdrawals Admin | PremierPredict</title>
+  <title>Admin Panel | PremierPredict</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/feather-icons"></script>
 </head>
-
 <body class="bg-gray-100 min-h-screen text-gray-800">
+
   <!-- Header -->
   <header class="bg-blue-600 text-white py-4 shadow-md">
     <div class="container mx-auto flex justify-between items-center px-4">
-      <h1 class="text-xl font-bold">Admin Dashboard</h1>
-      <div class="flex items-center space-x-2">
-        <i data-feather="credit-card" class="w-5 h-5"></i>
-        <span class="text-sm">Withdrawals</span>
+      <h1 class="text-xl font-bold">PremierPredict Admin</h1>
+      <div class="flex items-center space-x-3 text-sm">
+        <button onclick="switchTab('withdrawals')" class="hover:underline">Withdrawals</button>
+        <button onclick="switchTab('rounds')" class="hover:underline">Rounds</button>
+        <button onclick="switchTab('tickets')" class="hover:underline">Tickets</button>
+        <button onclick="switchTab('wallets')" class="hover:underline">Wallets</button>
       </div>
     </div>
   </header>
 
-  <!-- Main content -->
-  <main class="container mx-auto mt-8 px-4">
-    <h2 class="text-lg font-semibold mb-4">Pending Withdrawals</h2>
+  <!-- Tabs -->
+  <main class="container mx-auto mt-8 px-4 space-y-8">
 
-    <!-- Table -->
-    <div class="overflow-x-auto bg-white rounded-lg shadow">
-      <table class="min-w-full text-sm text-left border">
-        <thead class="bg-gray-50 border-b">
-          <tr>
-            <th class="px-4 py-3">#</th>
-            <th class="px-4 py-3">User</th>
-            <th class="px-4 py-3">Bank</th>
-            <th class="px-4 py-3">Account</th>
-            <th class="px-4 py-3">Amount</th>
-            <th class="px-4 py-3">Status</th>
-            <th class="px-4 py-3">Date</th>
-            <th class="px-4 py-3 text-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="withdrawalsBody" class="divide-y"></tbody>
-      </table>
-    </div>
+    <!-- Withdrawals -->
+    <section id="tab-withdrawals">
+      <h2 class="text-lg font-semibold mb-4">Pending Withdrawals</h2>
+      <div class="overflow-x-auto bg-white rounded-lg shadow">
+        <table class="min-w-full text-sm text-left border">
+          <thead class="bg-gray-50 border-b">
+            <tr>
+              <th class="px-4 py-3">#</th>
+              <th class="px-4 py-3">User</th>
+              <th class="px-4 py-3">Bank</th>
+              <th class="px-4 py-3">Account</th>
+              <th class="px-4 py-3">Amount</th>
+              <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3">Date</th>
+              <th class="px-4 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="withdrawalsBody" class="divide-y"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Rounds -->
+    <section id="tab-rounds" class="hidden">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold">Manage Rounds</h2>
+        <button onclick="newRoundPrompt()" class="bg-blue-600 text-white px-3 py-1 rounded">+ New Round</button>
+      </div>
+      <div id="roundsList" class="bg-white rounded-lg shadow divide-y"></div>
+    </section>
+
+    <!-- Tickets -->
+    <section id="tab-tickets" class="hidden">
+      <h2 class="text-lg font-semibold mb-4">Pending & Won Tickets</h2>
+      <div id="ticketsList" class="bg-white rounded-lg shadow divide-y"></div>
+    </section>
+
+    <!-- Wallets -->
+    <section id="tab-wallets" class="hidden">
+      <h2 class="text-lg font-semibold mb-4">Adjust User Balance</h2>
+      <form id="walletForm" class="bg-white p-4 rounded-lg shadow space-y-3 max-w-md">
+        <input id="userId" type="number" placeholder="User ID"
+               class="border rounded w-full px-3 py-2" required>
+        <input id="adjustAmount" type="number" placeholder="Amount (₦)" step="0.01"
+               class="border rounded w-full px-3 py-2" required>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Update Balance</button>
+        <p id="walletMsg" class="text-sm mt-2"></p>
+      </form>
+    </section>
+
   </main>
 
   <!-- Spinner -->
@@ -50,80 +83,162 @@
   </div>
 
   <script>
-    const API = "/api/withdrawals";
-    const spinner = document.getElementById("spinner");
+    const API = {
+      withdrawals: "/api/withdrawals/admin",
+      rounds: "/api/admin/rounds",
+      tickets: "/api/admin/tickets",
+      wallet: "/api/admin/users"
+    };
 
+    const spinner = document.getElementById("spinner");
     const showSpinner = () => spinner.classList.remove("hidden");
     const hideSpinner = () => spinner.classList.add("hidden");
+
+    function switchTab(name) {
+      document.querySelectorAll("main section").forEach(s => s.classList.add("hidden"));
+      document.getElementById(`tab-${name}`).classList.remove("hidden");
+      if (name === 'withdrawals') loadWithdrawals();
+      if (name === 'rounds') loadRounds();
+      if (name === 'tickets') loadTickets();
+    }
 
     function formatMoney(kobo) {
       return "₦" + (kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2 });
     }
 
+    // Withdrawals
     async function loadWithdrawals() {
       showSpinner();
-      try {
-        const res = await fetch(API + "/admin");
-        const data = await res.json();
-        const body = document.getElementById("withdrawalsBody");
-        if (!Array.isArray(data) || data.length === 0) {
-          body.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-gray-500">No withdrawal requests</td></tr>`;
-        } else {
-          body.innerHTML = data.map((w, i) => `
-            <tr class="hover:bg-gray-50 transition">
-              <td class="px-4 py-2">${i + 1}</td>
-              <td class="px-4 py-2">${w.username}</td>
-              <td class="px-4 py-2">${w.bank_name}</td>
-              <td class="px-4 py-2">${w.account_number}</td>
-              <td class="px-4 py-2 font-semibold">${formatMoney(w.amount_kobo)}</td>
-              <td class="px-4 py-2">
-                <span class="px-2 py-1 rounded text-xs ${
-                  w.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                  w.status === 'paid' ? 'bg-green-100 text-green-700' :
-                  'bg-red-100 text-red-700'
-                }">${w.status}</span>
-              </td>
-              <td class="px-4 py-2 text-sm">${new Date(w.created_at).toLocaleString()}</td>
-              <td class="px-4 py-2 text-right space-x-2">
-                ${w.status === 'pending' ? `
-                  <button onclick="approve(${w.id})" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded">Approve</button>
-                  <button onclick="reject(${w.id})" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded">Reject</button>
-                ` : ''}
-              </td>
-            </tr>
-          `).join("");
-        }
-      } catch (err) {
-        alert("Error loading withdrawals");
-        console.error(err);
-      }
+      const res = await fetch(API.withdrawals);
+      const data = await res.json();
+      const body = document.getElementById("withdrawalsBody");
       hideSpinner();
+
+      if (!data.length) return body.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-gray-500">No withdrawals</td></tr>`;
+      body.innerHTML = data.map((w, i) => `
+        <tr>
+          <td class="px-4 py-2">${i + 1}</td>
+          <td class="px-4 py-2">${w.username}</td>
+          <td class="px-4 py-2">${w.bank_name}</td>
+          <td class="px-4 py-2">${w.account_number}</td>
+          <td class="px-4 py-2 font-semibold">${formatMoney(w.amount_kobo)}</td>
+          <td class="px-4 py-2">${w.status}</td>
+          <td class="px-4 py-2">${new Date(w.created_at).toLocaleString()}</td>
+          <td class="px-4 py-2 text-right">
+            ${w.status === 'pending' ? `
+              <button onclick="approve(${w.id})" class="bg-green-600 text-white px-3 py-1 rounded">Approve</button>
+              <button onclick="reject(${w.id})" class="bg-red-600 text-white px-3 py-1 rounded">Reject</button>
+            ` : ''}
+          </td>
+        </tr>`).join('');
     }
 
     async function approve(id) {
-      if (!confirm("Mark this withdrawal as PAID?")) return;
+      if (!confirm("Mark as PAID?")) return;
       showSpinner();
-      const res = await fetch(`${API}/${id}/approve`, { method: "POST" });
-      const data = await res.json();
+      await fetch(`/api/withdrawals/${id}/approve`, { method: "POST" });
       hideSpinner();
-      alert(data.message || "Updated");
       loadWithdrawals();
     }
 
     async function reject(id) {
-      if (!confirm("Reject and refund this withdrawal?")) return;
+      if (!confirm("Reject and refund?")) return;
       showSpinner();
-      const res = await fetch(`${API}/${id}/reject`, { method: "POST" });
-      const data = await res.json();
+      await fetch(`/api/withdrawals/${id}/reject`, { method: "POST" });
       hideSpinner();
-      alert(data.message || "Updated");
       loadWithdrawals();
     }
 
-    (async () => {
-      feather.replace();
-      await loadWithdrawals();
-    })();
+    // Rounds
+    async function loadRounds() {
+      showSpinner();
+      const res = await fetch(API.rounds);
+      const data = await res.json();
+      const list = document.getElementById("roundsList");
+      hideSpinner();
+
+      list.innerHTML = data.map(r => `
+        <div class="flex justify-between items-center p-3">
+          <div>
+            <p class="font-semibold">${r.name}</p>
+            <p class="text-sm text-gray-500">${r.is_active ? "🟢 Active" : "⚪ Inactive"}</p>
+          </div>
+          <div class="space-x-2">
+            <button onclick="activateRound(${r.id})" class="bg-green-600 text-white px-3 py-1 rounded">Activate</button>
+            <button onclick="updateResults(${r.id})" class="bg-blue-600 text-white px-3 py-1 rounded">Update Results</button>
+          </div>
+        </div>`).join('');
+    }
+
+    async function newRoundPrompt() {
+      const name = prompt("Enter new round name:");
+      if (!name) return;
+      showSpinner();
+      await fetch(API.rounds, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+      hideSpinner();
+      loadRounds();
+    }
+
+    async function activateRound(id) {
+      showSpinner();
+      await fetch(`${API.rounds}/${id}/activate`, { method: "POST" });
+      hideSpinner();
+      loadRounds();
+    }
+
+    async function updateResults(id) {
+      const input = prompt("Enter results JSON (e.g. [{match_id:1,outcome:'H'}]):");
+      if (!input) return;
+      showSpinner();
+      await fetch(`${API.rounds}/${id}/results`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: input
+      });
+      hideSpinner();
+      alert("Results updated");
+    }
+
+    // Tickets
+    async function loadTickets() {
+      showSpinner();
+      const res = await fetch(API.tickets);
+      const data = await res.json();
+      const container = document.getElementById("ticketsList");
+      hideSpinner();
+
+      if (!data.length) return container.innerHTML = `<p class="p-4 text-gray-500">No tickets</p>`;
+      container.innerHTML = data.map(t => `
+        <div class="p-3 flex justify-between items-center">
+          <div>
+            <p class="font-semibold">${t.username}</p>
+            <p class="text-xs text-gray-500">Round ${t.round_id} | ${t.status}</p>
+          </div>
+          <div class="text-sm">${new Date(t.created_at).toLocaleString()}</div>
+        </div>`).join('');
+    }
+
+    // Wallet Adjustments
+    document.getElementById("walletForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const userId = document.getElementById("userId").value;
+      const amount = document.getElementById("adjustAmount").value;
+      const msg = document.getElementById("walletMsg");
+
+      showSpinner();
+      const res = await fetch(`${API.wallet}/${userId}/balance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount })
+      });
+      const data = await res.json();
+      hideSpinner();
+      msg.textContent = data.message || data.error;
+    });
+
+    // Init
+    feather.replace();
+    switchTab('withdrawals');
   </script>
 </body>
-              </html>
+</html>
