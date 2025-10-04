@@ -3,53 +3,67 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 
-
+// 🧩 Route imports
 import authRoutes from "./routes/auth.js";
 import walletRoutes from "./routes/wallet.js";
 import jackpotRoutes from "./routes/jackpot.js";
-import { authMiddleware } from "./middleware/authMiddleware.js";
 import dashboardRoutes from "./routes/dashboard.js";
 import withdrawalsRouter from "./routes/withdrawals.js";
 
+import { authMiddleware } from "./middleware/authMiddleware.js";
+
+// 🔧 Load environment variables
 dotenv.config();
 
 const app = express();
-// ✅ Middleware
-app.use(express.json());
-app.use("/api/withdrawals", withdrawalsRouter);
+const PORT = process.env.PORT || 4000;
 
-// ✅ Enable CORS for frontend requests
+/* -------------------------------------------
+   🧰 Middleware Setup
+-------------------------------------------- */
+app.use(express.json()); // Parse JSON bodies
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "*", // 🔒 set FRONTEND_URL in production
+    origin: process.env.FRONTEND_URL || "*", // ✅ Allow frontend requests
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-// ✅ Serve static frontend files (like wallet.html)
-app.use(express.static("docs"));
-
-// ✅ Routes
-app.use("/api/dashboard", dashboardRoutes);
+/* -------------------------------------------
+   🧭 API Routes
+-------------------------------------------- */
 app.use("/api/auth", authRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/jackpot", jackpotRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/withdrawals", withdrawalsRouter);
 
-// ✅ Health check / protected test route
+/* -------------------------------------------
+   🧪 Protected Test Route (optional)
+-------------------------------------------- */
 app.get("/api/protected", authMiddleware, (req, res) => {
-  res.json({ message: `Hello ${req.user.id}, you have access!` });
+  res.json({ message: `Hello user ${req.user.id}, you have access!` });
 });
 
-// ✅ Catch-all (optional) – useful if serving frontend SPA
+/* -------------------------------------------
+   🗂️ Static Frontend (Serve /docs folder)
+-------------------------------------------- */
+app.use(express.static("docs"));
+
+/* -------------------------------------------
+   ⚠️ Catch-All Route — must come LAST
+   (useful for SPA routing or 404 fallback)
+-------------------------------------------- */
 app.get("*", (req, res) => {
   res.sendFile("index.html", { root: "docs" });
 });
 
-// ✅ Start server
-const PORT = process.env.PORT || 4000;
+/* -------------------------------------------
+   🚀 Start Server
+-------------------------------------------- */
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`✅ Server running on http://localhost:${PORT}`);
 });
 
 export default app;
