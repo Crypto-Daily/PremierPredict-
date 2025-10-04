@@ -16,7 +16,7 @@ dotenv.config();
 const app = express();
 // ✅ Middleware
 app.use(express.json());
-app.use("/api/withdrawals", withdrawalsRouter);
+app.use("/api/withdrawals/admin", withdrawalsRouter);
 
 // ✅ Enable CORS for frontend requests
 app.use(
