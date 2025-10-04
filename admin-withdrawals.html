@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Withdrawals Admin | PremierPredict</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/feather-icons"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen text-gray-800">
+  <!-- Header -->
+  <header class="bg-blue-600 text-white py-4 shadow-md">
+    <div class="container mx-auto flex justify-between items-center px-4">
+      <h1 class="text-xl font-bold">Admin Dashboard</h1>
+      <div class="flex items-center space-x-2">
+        <i data-feather="credit-card" class="w-5 h-5"></i>
+        <span class="text-sm">Withdrawals</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="container mx-auto mt-8 px-4">
+    <h2 class="text-lg font-semibold mb-4">Pending Withdrawals</h2>
+
+    <!-- Table -->
+    <div class="overflow-x-auto bg-white rounded-lg shadow">
+      <table class="min-w-full text-sm text-left border">
+        <thead class="bg-gray-50 border-b">
+          <tr>
+            <th class="px-4 py-3">#</th>
+            <th class="px-4 py-3">User</th>
+            <th class="px-4 py-3">Bank</th>
+            <th class="px-4 py-3">Account</th>
+            <th class="px-4 py-3">Amount</th>
+            <th class="px-4 py-3">Status</th>
+            <th class="px-4 py-3">Date</th>
+            <th class="px-4 py-3 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="withdrawalsBody" class="divide-y"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Spinner -->
+  <div id="spinner" class="fixed inset-0 bg-white bg-opacity-60 flex items-center justify-center hidden z-50">
+    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+  </div>
+
+  <script>
+    const API = "/api/withdrawals";
+    const spinner = document.getElementById("spinner");
+
+    const showSpinner = () => spinner.classList.remove("hidden");
+    const hideSpinner = () => spinner.classList.add("hidden");
+
+    function formatMoney(kobo) {
+      return "₦" + (kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2 });
+    }
+
+    async function loadWithdrawals() {
+      showSpinner();
+      try {
+        const res = await fetch(API + "/admin");
+        const data = await res.json();
+        const body = document.getElementById("withdrawalsBody");
+        if (!Array.isArray(data) || data.length === 0) {
+          body.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-gray-500">No withdrawal requests</td></tr>`;
+        } else {
+          body.innerHTML = data.map((w, i) => `
+            <tr class="hover:bg-gray-50 transition">
+              <td class="px-4 py-2">${i + 1}</td>
+              <td class="px-4 py-2">${w.username}</td>
+              <td class="px-4 py-2">${w.bank_name}</td>
+              <td class="px-4 py-2">${w.account_number}</td>
+              <td class="px-4 py-2 font-semibold">${formatMoney(w.amount_kobo)}</td>
+              <td class="px-4 py-2">
+                <span class="px-2 py-1 rounded text-xs ${
+                  w.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                  w.status === 'paid' ? 'bg-green-100 text-green-700' :
+                  'bg-red-100 text-red-700'
+                }">${w.status}</span>
+              </td>
+              <td class="px-4 py-2 text-sm">${new Date(w.created_at).toLocaleString()}</td>
+              <td class="px-4 py-2 text-right space-x-2">
+                ${w.status === 'pending' ? `
+                  <button onclick="approve(${w.id})" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded">Approve</button>
+                  <button onclick="reject(${w.id})" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded">Reject</button>
+                ` : ''}
+              </td>
+            </tr>
+          `).join("");
+        }
+      } catch (err) {
+        alert("Error loading withdrawals");
+        console.error(err);
+      }
+      hideSpinner();
+    }
+
+    async function approve(id) {
+      if (!confirm("Mark this withdrawal as PAID?")) return;
+      showSpinner();
+      const res = await fetch(`${API}/${id}/approve`, { method: "POST" });
+      const data = await res.json();
+      hideSpinner();
+      alert(data.message || "Updated");
+      loadWithdrawals();
+    }
+
+    async function reject(id) {
+      if (!confirm("Reject and refund this withdrawal?")) return;
+      showSpinner();
+      const res = await fetch(`${API}/${id}/reject`, { method: "POST" });
+      const data = await res.json();
+      hideSpinner();
+      alert(data.message || "Updated");
+      loadWithdrawals();
+    }
+
+    (async () => {
+      feather.replace();
+      await loadWithdrawals();
+    })();
+  </script>
+</body>
+              </html>
