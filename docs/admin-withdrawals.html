@@ -1,263 +1,442 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Panel | PremierPredict</title>
-  <meta name="theme-color" content="#2563eb">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin — PremierPredict</title>
+  <meta name="theme-color" content="#0f172a" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/feather-icons"></script>
+  <style>
+    /* Tiny animation helper for content swap */
+    .fade-enter { opacity: 0; transform: translateY(6px); }
+    .fade-enter-active { opacity: 1; transform: translateY(0); transition: all .22s ease-out; }
+    .fade-leave { opacity: 1; }
+    .fade-leave-active { opacity: 0; transition: opacity .15s ease-in; }
+  </style>
 </head>
-<body class="bg-gray-100 min-h-screen text-gray-800">
+<body class="bg-slate-900 text-slate-100 antialiased">
 
-  <!-- Header -->
-  <header class="bg-blue-600 text-white py-4 shadow-md">
-    <div class="container mx-auto flex justify-between items-center px-4">
-      <h1 class="text-xl font-bold">PremierPredict Admin</h1>
-      <div class="flex items-center space-x-3 text-sm">
-        <button onclick="switchTab('withdrawals')" class="hover:underline">Withdrawals</button>
-        <button onclick="switchTab('rounds')" class="hover:underline">Rounds</button>
-        <button onclick="switchTab('tickets')" class="hover:underline">Tickets</button>
-        <button onclick="switchTab('wallets')" class="hover:underline">Wallets</button>
+  <div class="min-h-screen flex">
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="w-72 bg-slate-800/90 border-r border-slate-700 p-4 flex flex-col transition-all">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-md flex items-center justify-center text-lg font-bold">PP</div>
+        <div>
+          <div class="text-lg font-semibold">PremierPredict</div>
+          <div class="text-xs text-slate-400">Admin Control Panel</div>
+        </div>
       </div>
-    </div>
-  </header>
 
-  <!-- Tabs -->
-  <main class="container mx-auto mt-8 px-4 space-y-8">
+      <nav class="flex-1">
+        <ul class="space-y-1">
+          <li><button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-700/60 flex items-center gap-3" data-tab="dashboard">🏠 Dashboard</button></li>
+          <li><button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-700/60 flex items-center gap-3" data-tab="rounds">🗓 Manage Rounds</button></li>
+          <li><button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-700/60 flex items-center gap-3" data-tab="results">✍️ Update Results</button></li>
+          <li><button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-700/60 flex items-center gap-3" data-tab="tickets">🎟 Tickets</button></li>
+          <li><button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-700/60 flex items-center gap-3" data-tab="withdrawals">💸 Withdrawals</button></li>
+        </ul>
+      </nav>
 
-    <!-- Withdrawals -->
-    <section id="tab-withdrawals">
-      <h2 class="text-lg font-semibold mb-4">Pending Withdrawals</h2>
-      <div class="overflow-x-auto bg-white rounded-lg shadow">
-        <table class="min-w-full text-sm text-left border">
-          <thead class="bg-gray-50 border-b">
-            <tr>
-              <th class="px-4 py-3">#</th>
-              <th class="px-4 py-3">User</th>
-              <th class="px-4 py-3">Bank</th>
-              <th class="px-4 py-3">Account</th>
-              <th class="px-4 py-3">Amount</th>
-              <th class="px-4 py-3">Status</th>
-              <th class="px-4 py-3">Date</th>
-              <th class="px-4 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="withdrawalsBody" class="divide-y"></tbody>
-        </table>
+      <div class="mt-6">
+        <button id="collapseBtn" class="w-full bg-slate-700/40 hover:bg-slate-700/60 text-slate-200 py-2 rounded-md">Collapse</button>
       </div>
-    </section>
+    </aside>
 
-    <!-- Rounds -->
-    <section id="tab-rounds" class="hidden">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold">Manage Rounds</h2>
-        <button onclick="newRoundPrompt()" class="bg-blue-600 text-white px-3 py-1 rounded">+ New Round</button>
-      </div>
-      <div id="roundsList" class="bg-white rounded-lg shadow divide-y"></div>
-    </section>
+    <!-- MAIN -->
+    <main class="flex-1 p-6 overflow-auto">
+      <!-- Header -->
+      <header class="flex items-center justify-between mb-6">
+        <div>
+          <h1 id="pageTitle" class="text-2xl font-bold">Dashboard</h1>
+          <p id="pageSub" class="text-sm text-slate-400">Overview & quick actions</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button id="refreshBtn" class="px-3 py-2 bg-slate-700/50 hover:bg-slate-700 rounded-md">Refresh</button>
+        </div>
+      </header>
 
-    <!-- Tickets -->
-    <section id="tab-tickets" class="hidden">
-      <h2 class="text-lg font-semibold mb-4">Pending & Won Tickets</h2>
-      <div id="ticketsList" class="bg-white rounded-lg shadow divide-y"></div>
-    </section>
+      <!-- Content area -->
+      <section id="contentArea" class="space-y-6">
 
-    <!-- Wallets -->
-    <section id="tab-wallets" class="hidden">
-      <h2 class="text-lg font-semibold mb-4">Adjust User Balance</h2>
-      <form id="walletForm" class="bg-white p-4 rounded-lg shadow space-y-3 max-w-md">
-        <input id="userId" type="number" placeholder="User ID"
-               class="border rounded w-full px-3 py-2" required>
-        <input id="adjustAmount" type="number" placeholder="Amount (₦)" step="0.01"
-               class="border rounded w-full px-3 py-2" required>
-        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded w-full">Update Balance</button>
-        <p id="walletMsg" class="text-sm mt-2"></p>
-      </form>
-    </section>
+        <!-- DASHBOARD -->
+        <div id="tab-dashboard" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 shadow">
+              <div class="text-sm text-slate-400">Total Rounds</div>
+              <div id="statRounds" class="text-2xl font-bold mt-2">—</div>
+            </div>
+            <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 shadow">
+              <div class="text-sm text-slate-400">Pending Withdrawals</div>
+              <div id="statPendingWithdrawals" class="text-2xl font-bold mt-2">—</div>
+            </div>
+            <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 shadow">
+              <div class="text-sm text-slate-400">Total Tickets</div>
+              <div id="statTickets" class="text-2xl font-bold mt-2">—</div>
+            </div>
+          </div>
 
-  </main>
+          <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 mt-4">
+            <h3 class="text-lg font-semibold mb-2">Quick Actions</h3>
+            <div class="flex gap-3">
+              <button class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded" onclick="switchTo('rounds')">➕ Create Round</button>
+              <button class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded" onclick="switchTo('withdrawals')">Manage Withdrawals</button>
+              <button class="px-4 py-2 bg-sky-600 hover:bg-sky-700 rounded" onclick="switchTo('tickets')">View Tickets</button>
+            </div>
+          </div>
+        </div>
 
-  <!-- Spinner -->
-  <div id="spinner" class="fixed inset-0 bg-white bg-opacity-60 flex items-center justify-center hidden z-50">
-    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+        <!-- ROUNDS -->
+        <div id="tab-rounds" class="hidden space-y-4">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <h2 class="text-xl font-semibold">Manage Rounds</h2>
+            <div class="flex gap-2">
+              <button id="btnNewRound" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded">+ New Round</button>
+              <button id="btnReloadRounds" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded">Reload</button>
+            </div>
+          </div>
+
+          <div id="roundsContainer" class="space-y-3">
+            <!-- rounds list inserted here -->
+          </div>
+        </div>
+
+        <!-- RESULTS -->
+        <div id="tab-results" class="hidden space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-semibold">Update Results</h2>
+            <div class="flex gap-2">
+              <select id="selectRoundForResults" class="bg-slate-800 border border-slate-700 rounded px-3 py-2"></select>
+              <button id="btnLoadMatchesForResults" class="px-3 py-2 bg-sky-600 hover:bg-sky-700 rounded">Load</button>
+            </div>
+          </div>
+
+          <div id="resultsInstructions" class="text-sm text-slate-400">
+            Select a round then click <b>Load</b>. You will be prompted to paste JSON array of results in the form:
+            <pre class="bg-slate-900 p-2 rounded mt-2 text-xs">[{"match_id":1,"result":"H"}, {"match_id":2,"result":"D"}]</pre>
+          </div>
+        </div>
+
+        <!-- TICKETS -->
+        <div id="tab-tickets" class="hidden space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-semibold">Tickets (won / pending)</h2>
+            <div>
+              <button id="btnReloadTickets" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded">Reload</button>
+            </div>
+          </div>
+
+          <div id="ticketsContainer" class="bg-slate-800 border border-slate-700 rounded p-3">
+            <!-- tickets list -->
+            <div id="ticketsList" class="space-y-2"></div>
+          </div>
+        </div>
+
+        <!-- WITHDRAWALS -->
+        <div id="tab-withdrawals" class="hidden space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-semibold">Withdrawals</h2>
+            <div>
+              <button id="btnReloadWithdrawals" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded">Reload</button>
+            </div>
+          </div>
+
+          <div class="bg-slate-800 border border-slate-700 rounded overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead class="text-slate-400 text-left">
+                <tr>
+                  <th class="px-3 py-2">#</th>
+                  <th class="px-3 py-2">User</th>
+                  <th class="px-3 py-2">Bank</th>
+                  <th class="px-3 py-2">Account</th>
+                  <th class="px-3 py-2">Amount</th>
+                  <th class="px-3 py-2">Status</th>
+                  <th class="px-3 py-2">Date</th>
+                  <th class="px-3 py-2">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="withdrawalsTableBody" class="divide-y"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+
+  <!-- GLOBAL SPINNER (center) -->
+  <div id="globalSpinner" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40">
+    <div class="animate-spin h-12 w-12 rounded-full border-4 border-t-blue-500 border-slate-700"></div>
   </div>
 
   <script>
-    const API = {
-      withdrawals: "/api/withdrawals/admin",
-      rounds: "/api/admin/rounds",
-      results: "/api/admin/results",
-      tickets: "/api/admin/tickets",
-      wallet: "/api/admin/users"
+    // ----- Config (endpoints) -----
+    const ENDPOINTS = {
+      adminRounds: "/api/admin/rounds",
+      adminResults: "/api/admin/results",      // POST /:roundId
+      adminTickets: "/api/admin/tickets",
+      withdrawalsAdmin: "/api/withdrawals/admin",
+      withdrawApprove: (id) => `/api/withdrawals/${id}/approve`,
+      withdrawReject: (id) => `/api/withdrawals/${id}/reject`
     };
 
-    const spinner = document.getElementById("spinner");
-    const showSpinner = () => spinner.classList.remove("hidden");
-    const hideSpinner = () => spinner.classList.add("hidden");
+    // ----- Utils -----
+    const showGlobalSpinner = (on=true) => {
+      document.getElementById("globalSpinner").style.display = on ? "flex" : "none";
+    };
+    const dateFmt = (s) => s ? new Date(s).toLocaleString() : "—";
+    const money = k => "₦" + (Number(k)/100).toLocaleString();
 
-    function switchTab(name) {
-      document.querySelectorAll("main section").forEach(s => s.classList.add("hidden"));
-      document.getElementById(`tab-${name}`).classList.remove("hidden");
-      if (name === 'withdrawals') loadWithdrawals();
-      if (name === 'rounds') loadRounds();
-      if (name === 'tickets') loadTickets();
-    }
-
-    function formatMoney(kobo) {
-      return "₦" + (kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2 });
-    }
-
-    // Withdrawals
-    async function loadWithdrawals() {
-      showSpinner();
-      const res = await fetch(API.withdrawals);
-      const data = await res.json();
-      const body = document.getElementById("withdrawalsBody");
-      hideSpinner();
-
-      if (!data.length) {
-        body.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-gray-500">No withdrawals</td></tr>`;
-        return;
+    // ----- Sidebar behavior -----
+    document.querySelectorAll('#sidebar [data-tab]').forEach(btn=>{
+      btn.addEventListener('click', ()=> switchTo(btn.dataset.tab));
+    });
+    document.getElementById('collapseBtn').addEventListener('click', ()=>{
+      const sb = document.getElementById('sidebar');
+      if (sb.style.width === '72px' || sb.classList.contains('collapsed')) {
+        sb.style.width = '18rem'; sb.classList.remove('collapsed');
+      } else {
+        sb.style.width = '72px'; sb.classList.add('collapsed');
       }
+    });
 
-      body.innerHTML = data.map((w, i) => `
-        <tr>
-          <td class="px-4 py-2">${i + 1}</td>
-          <td class="px-4 py-2">${w.username}</td>
-          <td class="px-4 py-2">${w.bank_name}</td>
-          <td class="px-4 py-2">${w.account_number}</td>
-          <td class="px-4 py-2 font-semibold">${formatMoney(w.amount_kobo)}</td>
-          <td class="px-4 py-2 capitalize">${w.status}</td>
-          <td class="px-4 py-2">${new Date(w.created_at).toLocaleString()}</td>
-          <td class="px-4 py-2 text-right space-x-2">
-            ${w.status === 'pending' ? `
-              <button onclick="approve(${w.id})" class="bg-green-600 text-white px-3 py-1 rounded">Approve</button>
-              <button onclick="reject(${w.id})" class="bg-red-600 text-white px-3 py-1 rounded">Reject</button>
-            ` : ''}
-          </td>
-        </tr>`).join('');
+    // ----- Navigation -----
+    function switchTo(tab) {
+      document.querySelectorAll('#contentArea > div').forEach(d => d.classList.add('hidden'));
+      const el = document.getElementById(`tab-${tab}`);
+      if (el) el.classList.remove('hidden');
+      const titleMap = {
+        dashboard: ['Dashboard','Overview & quick actions'],
+        rounds: ['Manage Rounds','Create or activate rounds'],
+        results: ['Update Results','Load a round and push results'],
+        tickets: ['Tickets','Pending and won tickets'],
+        withdrawals: ['Withdrawals','Approve or reject withdrawals']
+      };
+      const [title, sub] = titleMap[tab] || ['Admin',''];
+      document.getElementById('pageTitle').innerText = title;
+      document.getElementById('pageSub').innerText = sub;
     }
 
-    async function approve(id) {
-      if (!confirm("Mark as PAID?")) return;
-      showSpinner();
-      await fetch(`/api/withdrawals/${id}/approve`, { method: "POST" });
-      hideSpinner();
-      loadWithdrawals();
+    // ----- Dashboard stats -----
+    async function loadDashboardStats() {
+      showGlobalSpinner(true);
+      try {
+        const [roundsRes, ticketsRes, withdrawalsRes] = await Promise.all([
+          fetch(ENDPOINTS.adminRounds),
+          fetch(ENDPOINTS.adminTickets),
+          fetch(ENDPOINTS.withdrawalsAdmin)
+        ]);
+        const rounds = await safeJson(roundsRes);
+        const tickets = await safeJson(ticketsRes);
+        const withdrawals = await safeJson(withdrawalsRes);
+
+        document.getElementById('statRounds').innerText = Array.isArray(rounds) ? rounds.length : '—';
+        document.getElementById('statTickets').innerText = Array.isArray(tickets) ? tickets.length : '—';
+        const pendingCount = Array.isArray(withdrawals) ? withdrawals.filter(w => w.status === 'pending').length : 0;
+        document.getElementById('statPendingWithdrawals').innerText = pendingCount;
+      } catch (err) {
+        console.error("Dashboard error", err);
+      } finally { showGlobalSpinner(false); }
     }
 
-    async function reject(id) {
-      if (!confirm("Reject and refund?")) return;
-      showSpinner();
-      await fetch(`/api/withdrawals/${id}/reject`, { method: "POST" });
-      hideSpinner();
-      loadWithdrawals();
-    }
-
-    // Rounds
+    // ----- Rounds -----
     async function loadRounds() {
-      showSpinner();
-      const res = await fetch(API.rounds);
-      const data = await res.json();
-      const list = document.getElementById("roundsList");
-      hideSpinner();
+      showGlobalSpinner(true);
+      try {
+        const res = await fetch(ENDPOINTS.adminRounds);
+        const rounds = await safeJson(res);
+        const container = document.getElementById('roundsContainer');
+        const selectForResults = document.getElementById('selectRoundForResults');
 
-      if (!data.length) {
-        list.innerHTML = `<p class="p-4 text-gray-500">No rounds found</p>`;
-        return;
-      }
+        container.innerHTML = '';
+        selectForResults.innerHTML = '<option value="">Select round</option>';
 
-      list.innerHTML = data.map(r => `
-        <div class="flex justify-between items-center p-3">
-          <div>
-            <p class="font-semibold">${r.name}</p>
-            <p class="text-sm text-gray-500">${r.status === 'open' ? '🟢 Open' : '⚪ Closed'}</p>
-          </div>
-          <div class="space-x-2">
-            <button onclick="activateRound(${r.id})" class="bg-green-600 text-white px-3 py-1 rounded">Activate</button>
-            <button onclick="updateResults(${r.id})" class="bg-blue-600 text-white px-3 py-1 rounded">Update Results</button>
-          </div>
-        </div>`).join('');
+        if (!Array.isArray(rounds) || rounds.length === 0) {
+          container.innerHTML = '<div class="p-4 text-slate-400">No rounds found.</div>';
+          return;
+        }
+
+        rounds.forEach(r => {
+          // list item
+          const div = document.createElement('div');
+          div.className = 'flex justify-between items-center p-3 bg-slate-800/60 border border-slate-700 rounded';
+          div.innerHTML = `
+            <div>
+              <div class="font-semibold">${escapeHtml(r.name)}</div>
+              <div class="text-sm text-slate-400">${r.is_active ? '🟢 Active' : '⚪ Inactive'} • ${r.status || ''}</div>
+              <div class="text-xs text-slate-500 mt-1">Start: ${dateFmt(r.start_time)} • End: ${dateFmt(r.end_time)}</div>
+            </div>
+            <div class="flex gap-2">
+              <button class="px-3 py-1 bg-green-600 rounded activateBtn">Activate</button>
+              <button class="px-3 py-1 bg-sky-600 rounded resultsBtn">Results</button>
+            </div>
+          `;
+          // attach actions
+          div.querySelector('.activateBtn').addEventListener('click', ()=> activateRound(r.id));
+          div.querySelector('.resultsBtn').addEventListener('click', ()=> promptUpdateResults(r.id, r.name));
+          container.appendChild(div);
+
+          // select option
+          const opt = document.createElement('option');
+          opt.value = r.id;
+          opt.innerText = `${r.name} (${r.is_active ? 'active' : 'inactive'})`;
+          selectForResults.appendChild(opt);
+        });
+      } catch (err) {
+        console.error("loadRounds", err);
+        document.getElementById('roundsContainer').innerHTML = '<div class="p-4 text-red-400">Error loading rounds</div>';
+      } finally { showGlobalSpinner(false); }
     }
 
-    async function newRoundPrompt() {
-      const name = prompt("Enter new round name:");
-      if (!name) return;
-      showSpinner();
-      await fetch(API.rounds, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name })
-      });
-      hideSpinner();
-      loadRounds();
+    async function createRound(name, start_time=null, end_time=null) {
+      showGlobalSpinner(true);
+      try {
+        const body = { name };
+        if (start_time) body.start_time = start_time;
+        if (end_time) body.end_time = end_time;
+        const res = await fetch(ENDPOINTS.adminRounds, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        const data = await safeJson(res);
+        if (!res.ok) throw new Error(data.error || 'Failed to create round');
+        await loadRounds();
+        alert('Round created');
+      } catch (err) {
+        alert('Create round failed: ' + err.message);
+      } finally { showGlobalSpinner(false); }
     }
 
     async function activateRound(id) {
-      showSpinner();
-      await fetch(`${API.rounds}/${id}/activate`, { method: "POST" });
-      hideSpinner();
-      loadRounds();
+      if (!confirm('Activate this round? This will deactivate others.')) return;
+      showGlobalSpinner(true);
+      try {
+        const res = await fetch(`${ENDPOINTS.adminRounds}/${id}/activate`, { method: 'POST' });
+        const data = await safeJson(res);
+        if (!res.ok) throw new Error(data.error || 'Activate failed');
+        await loadRounds();
+        alert('Activated');
+      } catch (err) {
+        alert('Activate failed: ' + err.message);
+      } finally { showGlobalSpinner(false); }
     }
 
-    async function updateResults(id) {
-      const input = prompt("Enter results JSON (e.g. [{match_id:1,outcome:'H'}]):");
+    // ----- Results -----
+    function promptUpdateResults(roundId, roundName='') {
+      const example = `[{"match_id":1,"result":"H"},{"match_id":2,"result":"D"}]`;
+      const input = prompt(`Paste results JSON for "${roundName || roundId}"\n\nExample:\n${example}`);
       if (!input) return;
-      showSpinner();
-      await fetch(`${API.results}/${id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: input
-      });
-      hideSpinner();
-      alert("Results updated successfully");
+      // validate by parsing
+      let parsed;
+      try { parsed = JSON.parse(input); }
+      catch(e){ alert('Invalid JSON'); return; }
+      if (!Array.isArray(parsed)) { alert('Expected an array'); return; }
+      updateResults(roundId, parsed);
     }
 
-    // Tickets
+    async function updateResults(roundId, resultsArr) {
+      showGlobalSpinner(true);
+      try {
+        const res = await fetch(`${ENDPOINTS.adminResults}/${roundId}`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ results: resultsArr })
+        });
+        const data = await safeJson(res);
+        if (!res.ok) throw new Error(data.error || 'Update failed');
+        alert('Results updated');
+      } catch (err) {
+        alert('Update failed: ' + err.message);
+      } finally { showGlobalSpinner(false); }
+    }
+
+    // ----- Tickets -----
     async function loadTickets() {
-      showSpinner();
-      const res = await fetch(API.tickets);
-      const data = await res.json();
-      const container = document.getElementById("ticketsList");
-      hideSpinner();
-
-      if (!data.length) {
-        container.innerHTML = `<p class="p-4 text-gray-500">No tickets found</p>`;
-        return;
-      }
-
-      container.innerHTML = data.map(t => `
-        <div class="p-3 flex justify-between items-center">
-          <div>
-            <p class="font-semibold">${t.username}</p>
-            <p class="text-xs text-gray-500">${t.round_name || 'Round ' + t.round_id} | ${t.ticket_status}</p>
-          </div>
-          <div class="text-sm">${new Date(t.created_at).toLocaleString()}</div>
-        </div>`).join('');
+      showGlobalSpinner(true);
+      try {
+        const res = await fetch(ENDPOINTS.adminTickets);
+        const data = await safeJson(res);
+        const container = document.getElementById('ticketsList');
+        container.innerHTML = '';
+        if (!Array.isArray(data) || data.length === 0) {
+          container.innerHTML = '<div class="p-3 text-slate-400">No tickets found.</div>';
+          return;
+        }
+        data.forEach((t, i) => {
+          const div = document.createElement('div');
+          div.className = 'p-3 border-b border-slate-700 flex justify-between items-center';
+          div.innerHTML = `
+            <div>
+              <div class="font-semibold">${escapeHtml(t.username)}</div>
+              <div class="text-xs text-slate-400">${escapeHtml(t.round_name || ('Round ' + t.round_id))} • ${escapeHtml(t.ticket_status)}</div>
+            </div>
+            <div class="text-xs text-slate-400">${dateFmt(t.created_at)}</div>
+          `;
+          container.appendChild(div);
+        });
+      } catch (err) {
+        console.error("loadTickets", err);
+        document.getElementById('ticketsList').innerHTML = '<div class="p-3 text-red-400">Error loading tickets</div>';
+      } finally { showGlobalSpinner(false); }
     }
 
-    // Wallet Adjustments
-    document.getElementById("walletForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const userId = document.getElementById("userId").value;
-      const amount = document.getElementById("adjustAmount").value;
-      const msg = document.getElementById("walletMsg");
+    // ----- Withdrawals -----
+    async function loadWithdrawals() {
+      showGlobalSpinner(true);
+      try {
+        const res = await fetch(ENDPOINTS.withdrawalsAdmin);
+        const data = await safeJson(res);
+        const tbody = document.getElementById('withdrawalsTableBody');
+        tbody.innerHTML = '';
+        if (!Array.isArray(data) || data.length === 0) {
+          tbody.innerHTML = `<tr><td class="px-3 py-3 text-slate-400" colspan="8">No withdrawals</td></tr>`;
+          return;
+        }
+        data.forEach((w, i)=> {
+          const tr = document.createElement('tr');
+          tr.className = 'border-t border-slate-700';
+          tr.innerHTML = `
+            <td class="px-3 py-2">${i+1}</td>
+            <td class="px-3 py-2">${escapeHtml(w.username)}</td>
+            <td class="px-3 py-2">${escapeHtml(w.bank_name)}</td>
+            <td class="px-3 py-2">${escapeHtml(w.account_number)}</td>
+            <td class="px-3 py-2 font-semibold">${money(w.amount_kobo)}</td>
+            <td class="px-3 py-2">${escapeHtml(w.status)}</td>
+            <td class="px-3 py-2">${dateFmt(w.created_at)}</td>
+            <td class="px-3 py-2">
+              ${w.status === 'pending' ? `<button class="approveBtn px-2 py-1 bg-green-600 rounded">Approve</button>
+              <button class="rejectBtn px-2 py-1 bg-red-600 rounded ml-2">Reject</button>` : ''}
+            </td>
+          `;
+          tbody.appendChild(tr);
 
-      showSpinner();
-      const res = await fetch(`${API.wallet}/${userId}/balance`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount })
-      });
-      const data = await res.json();
-      hideSpinner();
-      msg.textContent = data.message || data.error || "Balance updated.";
-    });
+          if (w.status === 'pending') {
+            tr.querySelector('.approveBtn').addEventListener('click', ()=> approveWithdraw(w.id));
+            tr.querySelector('.rejectBtn').addEventListener('click', ()=> rejectWithdraw(w.id));
+          }
+        });
+      } catch (err) {
+        console.error("loadWithdrawals", err);
+        document.getElementById('withdrawalsTableBody').innerHTML = '<tr><td class="px-3 py-3 text-red-400" colspan="8">Error loading withdrawals</td></tr>';
+      } finally { showGlobalSpinner(false); }
+    }
 
-    // Init
-    feather.replace();
-    switchTab('withdrawals');
-  </script>
-</body>
-  </html>
+    async function approveWithdraw(id) {
+      if (!confirm('Mark withdrawal as paid?')) return;
+      showGlobalSpinner(true);
+      try {
+        const res = await fetch(ENDPOINTS.withdrawApprove(id), { method: 'POST' });
+        const data = await safeJson(res);
+        if (!res.ok) throw new Error(data.error || 'Approve failed');
+        alert('Marked as paid');
+        await loadWithdrawals();
+        await loadDashboardStats();
+      } catch (err) {
+        alert('Approve failed: ' + err.message);
+      } finally { showGlobalSpinner(false); }
+    }
+
+    async function rejectWithdraw(id) {
+      if (!confirm('Reject and refund this withdrawal?')) return;
+      showGlobalSpinner(true);
+      try {
+        const res = await fetch(ENDPOINTS.withdrawReject(id), { method: 'POST' });
+        const data = await safeJson(res);
+        if (!res.ok)
