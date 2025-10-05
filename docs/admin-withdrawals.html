@@ -357,7 +357,6 @@
       console.error(err);
     } finally { hideSpinner(); }
   }
-
   // =========== Results editor (modal) ===========
   let currentRoundId = null;
   function openResultsEditor(roundId, roundName) {
@@ -448,4 +447,89 @@
       // after results updated, consider reloading tickets to reflect wins
       loadTickets();
     } catch (err) {
-      alert('Error saving results: ' +
+      alert('Error saving results: ' + (err.message || ''));
+      console.error(err);
+    } finally { hideSpinner(); }
+  });
+
+  function closeResultsModal() {
+    document.getElementById('resultsModal').classList.add('hidden');
+    currentRoundId = null;
+    document.getElementById('matchesContainer').innerHTML = '';
+  }
+
+  // =========== Tickets ===========
+  async function loadTickets() {
+    const list = document.getElementById('ticketsList');
+    const loading = document.getElementById('ticketsLoading');
+    loading.style.display = 'block';
+    list.innerHTML = '';
+    try {
+      const res = await fetch(API.adminTickets, { headers: { ...getAuthHeader() } });
+      if (!res.ok) throw new Error('tickets fetch failed');
+      const data = await res.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        list.innerHTML = '<div class="p-4 text-slate-500">No tickets found</div>';
+        return;
+      }
+
+      list.innerHTML = data.map(t => `
+        <div class="p-3 border-b flex justify-between items-center">
+          <div>
+            <div class="font-medium">${escapeHtml(t.username)}</div>
+            <div class="text-xs text-slate-500">${escapeHtml(t.round_name || 'Round ' + t.round_id)}</div>
+            <div class="text-xs mt-1">${t.ticket_status ? t.ticket_status.toUpperCase() : ''}</div>
+          </div>
+          <div class="text-xs text-slate-400">${new Date(t.created_at).toLocaleString()}</div>
+        </div>
+      `).join('');
+    } catch (err) {
+      list.innerHTML = `<div class="p-4 text-rose-600">Error loading tickets</div>`;
+      console.error(err);
+    } finally { loading.style.display = 'none'; }
+  }
+
+  // =========== Wallet adjustment ===========
+  document.getElementById('walletForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('walletUserId').value;
+    const amount = Number(document.getElementById('walletAmount').value);
+    const msg = document.getElementById('walletMsg');
+    if (!id || isNaN(amount)) { msg.textContent = 'Provide valid id and amount'; return; }
+    showSpinner();
+    try {
+      const res = await fetch(API.adjustWallet(id), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify({ amount })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'update failed');
+      msg.textContent = data.message || 'Balance updated';
+      document.getElementById('walletUserId').value = ''; document.getElementById('walletAmount').value = '';
+    } catch (err) {
+      msg.textContent = 'Error updating balance';
+      console.error(err);
+    } finally { hideSpinner(); }
+  });
+
+  // =========== Utils ===========
+  function escapeHtml(str = '') {
+    return String(str)
+      .replaceAll('&','&amp;')
+      .replaceAll('<','&lt;')
+      .replaceAll('>','&gt;')
+      .replaceAll('"','&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
+  // init default tab
+  setActiveTab('withdrawals');
+  loadWithdrawals();
+
+  // keyboard: Esc closes modal
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeResultsModal(); });
+
+  </script>
+</body>
+</html>
