@@ -3,68 +3,52 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Admin Dashboard | PremierPredict</title>
+  <title>PremierPredict Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-100 text-gray-900">
   <div class="flex flex-col min-h-screen">
     <header class="bg-blue-700 text-white p-4 flex justify-between items-center">
       <h1 class="text-xl font-bold">PremierPredict Admin</h1>
-      <button id="logoutBtn" class="bg-red-500 px-3 py-1 rounded">Logout</button>
     </header>
 
-    <main class="p-4 flex-1 space-y-6">
-      <!-- ROUNDS MANAGEMENT -->
+    <main class="p-4 space-y-6 flex-1">
+
+      <!-- 🔹 CREATE NEW ROUND -->
       <section class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-3">🏆 Manage Jackpot Rounds</h2>
-        <form id="newRoundForm" class="flex gap-2 flex-wrap mb-3">
+        <h2 class="text-lg font-semibold mb-3">🏆 Create New Jackpot Round</h2>
+        <form id="newRoundForm" class="flex flex-wrap gap-2">
           <input type="text" id="roundName" placeholder="Round name" class="border p-2 rounded w-full sm:w-1/4">
           <input type="datetime-local" id="startTime" class="border p-2 rounded w-full sm:w-1/4">
           <input type="datetime-local" id="endTime" class="border p-2 rounded w-full sm:w-1/4">
-          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Create Round</button>
+          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Create</button>
         </form>
-        <div id="roundsList" class="overflow-x-auto"></div>
+        <div id="roundsList" class="mt-3 overflow-x-auto text-sm"></div>
       </section>
 
-      <!-- WITHDRAWALS -->
+      <!-- 🔹 WITHDRAWALS -->
       <section class="bg-white p-4 rounded shadow">
         <h2 class="text-lg font-semibold mb-3">💸 Withdrawal Requests</h2>
-        <div id="withdrawalList" class="overflow-x-auto"></div>
+        <div id="withdrawalList" class="overflow-x-auto text-sm">Loading...</div>
       </section>
 
-      <!-- USERS -->
+      <!-- 🔹 TICKETS -->
       <section class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-3">👤 Users & Wallets</h2>
-        <div id="usersList" class="overflow-x-auto"></div>
+        <h2 class="text-lg font-semibold mb-3">🎫 User Tickets</h2>
+        <div id="ticketsList" class="overflow-x-auto text-sm">Loading...</div>
       </section>
 
-      <!-- TICKETS -->
-      <section class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-3">🎫 Tickets per Round</h2>
-        <div id="ticketsList" class="overflow-x-auto"></div>
-      </section>
     </main>
   </div>
 
   <script>
-    const API_BASE = "/api"; // Adjust if hosted differently
-    const token = localStorage.getItem("token");
+    const API_BASE = "/api/withdrawals";
 
-    // --- Redirect if not logged in ---
-    if (!token) {
-      alert("You must be logged in as admin");
-      window.location.href = "/login.html";
-    }
-
-    // --- Helper for Fetch with Auth ---
+    // Helper Fetch function
     async function apiFetch(url, options = {}) {
       const res = await fetch(url, {
         ...options,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          ...(options.headers || {}),
-        },
+        headers: { "Content-Type": "application/json" },
       });
       if (!res.ok) throw new Error(await res.text());
       return res.json();
@@ -75,19 +59,21 @@
     ========================================================== */
     document.getElementById("newRoundForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const name = roundName.value;
+      const name = roundName.value.trim();
       const start_time = startTime.value;
       const end_time = endTime.value;
+      if (!name || !start_time || !end_time) return alert("All fields required");
+
       try {
-        await apiFetch(`${API_BASE}/withdrawals/rounds`, {
+        await apiFetch(`${API_BASE}/rounds`, {
           method: "POST",
           body: JSON.stringify({ name, start_time, end_time }),
         });
-        alert("New round created");
+        alert("✅ New round created!");
         loadRounds();
       } catch (err) {
-        alert("Error creating round");
         console.error(err);
+        alert("❌ Error creating round");
       }
     });
 
@@ -96,29 +82,33 @@
     ========================================================== */
     async function loadWithdrawals() {
       try {
-        const data = await apiFetch(`${API_BASE}/withdrawals/admin`);
+        const data = await apiFetch(`${API_BASE}/admin`);
         withdrawalList.innerHTML = `
-          <table class="min-w-full text-sm text-left">
-            <thead>
-              <tr class="bg-gray-200">
+          <table class="min-w-full text-left border">
+            <thead class="bg-gray-200">
+              <tr>
                 <th class="p-2">User</th>
                 <th class="p-2">Bank</th>
+                <th class="p-2">Account</th>
                 <th class="p-2">Amount</th>
                 <th class="p-2">Status</th>
                 <th class="p-2">Actions</th>
               </tr>
             </thead>
             <tbody>
-              ${data.map(w => `
-                <tr class="border-b">
+              ${data.length === 0 ? 
+                `<tr><td colspan="6" class="p-3 text-center text-gray-500">No withdrawals yet</td></tr>` :
+                data.map(w => `
+                <tr class="border-t">
                   <td class="p-2">${w.username}</td>
                   <td class="p-2">${w.bank_name}</td>
-                  <td class="p-2">₦${(w.amount_kobo/100).toFixed(2)}</td>
-                  <td class="p-2">${w.status}</td>
-                  <td class="p-2">
+                  <td class="p-2">${w.account_number}</td>
+                  <td class="p-2">₦${(w.amount_kobo / 100).toFixed(2)}</td>
+                  <td class="p-2 font-medium">${w.status}</td>
+                  <td class="p-2 space-x-2">
                     ${w.status === "pending" ? `
-                      <button class="bg-green-500 text-white px-2 py-1 rounded" onclick="approveWithdrawal(${w.id})">Approve</button>
-                      <button class="bg-red-500 text-white px-2 py-1 rounded" onclick="rejectWithdrawal(${w.id})">Reject</button>
+                      <button onclick="approveWithdrawal(${w.id})" class="bg-green-500 text-white px-2 py-1 rounded">Approve</button>
+                      <button onclick="rejectWithdrawal(${w.id})" class="bg-red-500 text-white px-2 py-1 rounded">Reject</button>
                     ` : "—"}
                   </td>
                 </tr>`).join("")}
@@ -126,21 +116,27 @@
           </table>`;
       } catch (err) {
         console.error(err);
-        withdrawalList.innerHTML = "Error loading withdrawals";
+        withdrawalList.innerHTML = `<p class="text-red-500">Error loading withdrawals</p>`;
       }
     }
 
     async function approveWithdrawal(id) {
-      if (confirm("Mark as paid?")) {
-        await apiFetch(`${API_BASE}/withdrawals/${id}/approve`, { method: "POST" });
+      if (!confirm("Mark as paid?")) return;
+      try {
+        await apiFetch(`${API_BASE}/${id}/approve`, { method: "POST" });
         loadWithdrawals();
+      } catch (err) {
+        alert("❌ Error approving withdrawal");
       }
     }
 
     async function rejectWithdrawal(id) {
-      if (confirm("Reject and refund?")) {
-        await apiFetch(`${API_BASE}/withdrawals/${id}/reject`, { method: "POST" });
+      if (!confirm("Reject and refund user?")) return;
+      try {
+        await apiFetch(`${API_BASE}/${id}/reject`, { method: "POST" });
         loadWithdrawals();
+      } catch (err) {
+        alert("❌ Error rejecting withdrawal");
       }
     }
 
@@ -149,15 +145,22 @@
     ========================================================== */
     async function loadRounds() {
       try {
-        const data = await apiFetch(`${API_BASE}/dashboard/rounds`);
+        const res = await fetch(`/api/dashboard/rounds`);
+        const data = await res.json();
         roundsList.innerHTML = `
-          <table class="min-w-full text-sm text-left">
-            <thead><tr class="bg-gray-200">
-              <th class="p-2">Name</th><th class="p-2">Status</th><th class="p-2">Start</th><th class="p-2">End</th>
-            </tr></thead>
+          <table class="min-w-full text-left border">
+            <thead class="bg-gray-200">
+              <tr>
+                <th class="p-2">Name</th>
+                <th class="p-2">Status</th>
+                <th class="p-2">Start</th>
+                <th class="p-2">End</th>
+              </tr>
+            </thead>
             <tbody>
-              ${data.map(r => `
-                <tr class="border-b">
+              ${data.length === 0 ? `<tr><td colspan="4" class="p-3 text-center text-gray-500">No rounds yet</td></tr>` :
+                data.map(r => `
+                <tr class="border-t">
                   <td class="p-2">${r.name}</td>
                   <td class="p-2">${r.status}</td>
                   <td class="p-2">${new Date(r.start_time).toLocaleString()}</td>
@@ -167,51 +170,7 @@
           </table>`;
       } catch (err) {
         console.error(err);
-        roundsList.innerHTML = "Error loading rounds";
-      }
-    }
-
-    /* ==========================================================
-      👤 LOAD USERS
-    ========================================================== */
-    async function loadUsers() {
-      try {
-        const data = await apiFetch(`${API_BASE}/dashboard/users`);
-        usersList.innerHTML = `
-          <table class="min-w-full text-sm text-left">
-            <thead><tr class="bg-gray-200">
-              <th class="p-2">Username</th><th class="p-2">Email</th><th class="p-2">Balance</th><th class="p-2">Action</th>
-            </tr></thead>
-            <tbody>
-              ${data.map(u => `
-                <tr class="border-b">
-                  <td class="p-2">${u.username}</td>
-                  <td class="p-2">${u.email}</td>
-                  <td class="p-2">₦${(u.balance_kobo / 100).toFixed(2)}</td>
-                  <td class="p-2">
-                    <button class="bg-yellow-500 text-white px-2 py-1 rounded" onclick="updateBalance(${u.id})">Update</button>
-                  </td>
-                </tr>`).join("")}
-            </tbody>
-          </table>`;
-      } catch (err) {
-        console.error(err);
-        usersList.innerHTML = "Error loading users";
-      }
-    }
-
-    async function updateBalance(userId) {
-      const amount = prompt("Enter new balance (₦):");
-      if (!amount) return;
-      try {
-        await apiFetch(`${API_BASE}/dashboard/users/${userId}/balance`, {
-          method: "PUT",
-          body: JSON.stringify({ amount }),
-        });
-        alert("Balance updated");
-        loadUsers();
-      } catch (err) {
-        alert("Error updating balance");
+        roundsList.innerHTML = `<p class="text-red-500">Error loading rounds</p>`;
       }
     }
 
@@ -220,40 +179,38 @@
     ========================================================== */
     async function loadTickets() {
       try {
-        const data = await apiFetch(`${API_BASE}/withdrawals/tickets`);
+        const data = await apiFetch(`${API_BASE}/tickets`);
         ticketsList.innerHTML = `
-          <table class="min-w-full text-sm text-left">
-            <thead><tr class="bg-gray-200">
-              <th class="p-2">User</th><th class="p-2">Round</th><th class="p-2">Created</th><th class="p-2">Status</th>
-            </tr></thead>
+          <table class="min-w-full text-left border">
+            <thead class="bg-gray-200">
+              <tr>
+                <th class="p-2">User</th>
+                <th class="p-2">Round</th>
+                <th class="p-2">Created</th>
+                <th class="p-2">Status</th>
+              </tr>
+            </thead>
             <tbody>
-              ${data.map(t => `
-                <tr class="border-b">
+              ${data.length === 0 ? `<tr><td colspan="4" class="p-3 text-center text-gray-500">No tickets yet</td></tr>` :
+                data.map(t => `
+                <tr class="border-t">
                   <td class="p-2">${t.username}</td>
                   <td class="p-2">${t.round_name}</td>
                   <td class="p-2">${new Date(t.created_at).toLocaleString()}</td>
-                  <td class="p-2">${t.ticket_status}</td>
+                  <td class="p-2 font-medium">${t.ticket_status}</td>
                 </tr>`).join("")}
             </tbody>
           </table>`;
       } catch (err) {
         console.error(err);
-        ticketsList.innerHTML = "Error loading tickets";
+        ticketsList.innerHTML = `<p class="text-red-500">Error loading tickets</p>`;
       }
     }
 
-    /* ==========================================================
-      🚀 INIT
-    ========================================================== */
+    // 🚀 INIT
     loadRounds();
     loadWithdrawals();
-    loadUsers();
     loadTickets();
-
-    document.getElementById("logoutBtn").addEventListener("click", () => {
-      localStorage.removeItem("token");
-      window.location.href = "/login.html";
-    });
   </script>
 </body>
   </html>
