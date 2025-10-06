@@ -1,216 +1,199 @@
-<!DOCTYPE html>
-<html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>PremierPredict Admin</title>
+  <title>Profile | PremierPredict</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.css"></script>
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+  <style>
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #ffffff;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-around;
+      padding: 0.6rem 0;
+      z-index: 50;
+    }
+    .nav-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 0.75rem;
+      color: #6b7280;
+      transition: all 0.2s;
+    }
+    .nav-btn.active,
+    .nav-btn:hover {
+      color: #2563eb;
+    }
+    /* Spinner */
+    #spinner {
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      display: none;
+    }
+    #spinner div {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #2563eb;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 </head>
-<body class="bg-gray-100 text-gray-900">
-  <div class="flex flex-col min-h-screen">
-    <header class="bg-blue-700 text-white p-4 flex justify-between items-center">
-      <h1 class="text-xl font-bold">PremierPredict Admin</h1>
-    </header>
-
-    <main class="p-4 space-y-6 flex-1">
-
-      <!-- 🔹 CREATE NEW ROUND -->
-      <section class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-3">🏆 Create New Jackpot Round</h2>
-        <form id="newRoundForm" class="flex flex-wrap gap-2">
-          <input type="text" id="roundName" placeholder="Round name" class="border p-2 rounded w-full sm:w-1/4">
-          <input type="datetime-local" id="startTime" class="border p-2 rounded w-full sm:w-1/4">
-          <input type="datetime-local" id="endTime" class="border p-2 rounded w-full sm:w-1/4">
-          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Create</button>
-        </form>
-        <div id="roundsList" class="mt-3 overflow-x-auto text-sm"></div>
-      </section>
-
-      <!-- 🔹 WITHDRAWALS -->
-      <section class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-3">💸 Withdrawal Requests</h2>
-        <div id="withdrawalList" class="overflow-x-auto text-sm">Loading...</div>
-      </section>
-
-      <!-- 🔹 TICKETS -->
-      <section class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-3">🎫 User Tickets</h2>
-        <div id="ticketsList" class="overflow-x-auto text-sm">Loading...</div>
-      </section>
-
-    </main>
+<body class="bg-gray-50 min-h-screen text-gray-800 pb-20">
+  <!-- Spinner -->
+  <div id="spinner"><div></div></div>
+  <!-- Header -->
+  <header class="flex justify-between items-center p-4 border-b bg-white">
+    <div class="flex items-center space-x-2">
+      <i data-feather="user" class="w-6 h-6 text-blue-600"></i>
+      <h1 class="text-lg font-bold text-blue-600">PremierPredict</h1>
+    </div>
+  </header>
+  <!-- Profile -->
+  <div class="text-center p-6 bg-white border-b">
+    <div id="avatar" class="w-20 h-20 mx-auto mb-3 rounded-full bg-blue-600 text-white flex items-center justify-center text-3xl font-bold">
+      U
+    </div>
+    <h3 id="username" class="text-lg font-bold">Loading...</h3>
+    <p class="text-gray-500 mb-2">Member</p>
+    <p class="text-lg font-bold text-blue-600">Balance: <span id="balance">₦0.00</span></p>
+  </div>
+  <!-- Menu -->
+  <div class="mt-4">
+    <!-- How to Play (Dropdown) -->
+    <div class="bg-white border-b">
+      <button id="howToPlayBtn" class="w-full flex justify-between items-center px-4 py-3 text-gray-700 hover:bg-gray-100">
+        <span class="flex items-center"><i data-feather="help-circle" class="mr-2 w-5 h-5"></i> How to Play</span>
+        <i id="chevronIcon" data-feather="chevron-down" class="w-5 h-5"></i>
+      </button>
+      <div id="howToPlayContent" class="hidden px-6 py-4 text-sm text-gray-600 bg-gray-50">
+        Select 10 Premier League matches, choose your predictions, and place your bet for just ₦100. Once submitted, your ticket is saved and awaits the results. Boom — done!
+      </div>
+    </div>
+    <!-- Update App -->
+    <a href="https://premierpredict.onrender.com" class="block bg-white border-b px-4 py-3 text-gray-700 hover:bg-gray-100 flex items-center">
+      <i data-feather="refresh-ccw" class="mr-2 w-5 h-5"></i> Update App
+    </a>
+  </div>
+  <!-- Footer -->
+  <footer class="mt-6 text-center text-xs text-gray-500 px-4">
+    <p>© 2025 PremierPredict. All rights reserved.</p>
+    <p class="mt-2">Age 18 and above only. Play responsibly.</p>
+    <div class="mt-2">
+      <a href="#" class="hover:underline">Terms & Conditions</a> | 
+      <a href="#" class="hover:underline">About Us</a>
+    </div>
+  </footer>
+  <!-- Logout Button -->
+  <div class="px-4 mt-6">
+    <button id="logoutBtn" class="w-full bg-red-500 hover:bg-red-600 text-white py-3 rounded-lg font-medium transition">
+      Logout
+    </button>
   </div>
 
+  <a href="admin-withdrawal.html" class="nav-btn">
+    admin</a>
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="dashboard.html" class="nav-btn">
+      <i data-feather="home" class="w-5 h-5 mb-1"></i>
+      Home
+    </a>
+    <a href="bets.html" class="nav-btn">
+      <i data-feather="activity" class="w-5 h-5 mb-1"></i>
+      Bets
+    </a>
+    <a href="wallet.html" class="nav-btn">
+      <i data-feather="credit-card" class="w-5 h-5 mb-1"></i>
+      Wallet
+    </a>
+    <a href="jackpot.html" class="nav-btn">
+      <i data-feather="gift" class="w-5 h-5 mb-1"></i>
+      Jackpot
+    </a>
+    <a href="profile.html" class="nav-btn active">
+      <i data-feather="user" class="w-5 h-5 mb-1"></i>
+      Profile
+    </a>
+  </nav>
   <script>
-    const API_BASE = "/api/withdrawals";
+    AOS.init();
+    feather.replace();
+    const spinner = document.getElementById("spinner");
+    const showSpinner = () => spinner.style.display = "flex";
+    const hideSpinner = () => spinner.style.display = "none";
 
-    // Helper Fetch function
-    async function apiFetch(url, options = {}) {
-      const res = await fetch(url, {
-        ...options,
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    }
+    const API_URL = "https://premierpredict.onrender.com/api";
+    const getToken = () => localStorage.getItem("token");
 
-    /* ==========================================================
-      🏆 CREATE ROUND
-    ========================================================== */
-    document.getElementById("newRoundForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const name = roundName.value.trim();
-      const start_time = startTime.value;
-      const end_time = endTime.value;
-      if (!name || !start_time || !end_time) return alert("All fields required");
-
-      try {
-        await apiFetch(`${API_BASE}/rounds`, {
-          method: "POST",
-          body: JSON.stringify({ name, start_time, end_time }),
-        });
-        alert("✅ New round created!");
-        loadRounds();
-      } catch (err) {
-        console.error(err);
-        alert("❌ Error creating round");
-      }
+    // Logout
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      localStorage.removeItem("token");
+      window.location.href = "index.html";
     });
 
-    /* ==========================================================
-      💸 LOAD WITHDRAWALS
-    ========================================================== */
-    async function loadWithdrawals() {
-      try {
-        const data = await apiFetch(`${API_BASE}/admin`);
-        withdrawalList.innerHTML = `
-          <table class="min-w-full text-left border">
-            <thead class="bg-gray-200">
-              <tr>
-                <th class="p-2">User</th>
-                <th class="p-2">Bank</th>
-                <th class="p-2">Account</th>
-                <th class="p-2">Amount</th>
-                <th class="p-2">Status</th>
-                <th class="p-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${data.length === 0 ? 
-                `<tr><td colspan="6" class="p-3 text-center text-gray-500">No withdrawals yet</td></tr>` :
-                data.map(w => `
-                <tr class="border-t">
-                  <td class="p-2">${w.username}</td>
-                  <td class="p-2">${w.bank_name}</td>
-                  <td class="p-2">${w.account_number}</td>
-                  <td class="p-2">₦${(w.amount_kobo / 100).toFixed(2)}</td>
-                  <td class="p-2 font-medium">${w.status}</td>
-                  <td class="p-2 space-x-2">
-                    ${w.status === "pending" ? `
-                      <button onclick="approveWithdrawal(${w.id})" class="bg-green-500 text-white px-2 py-1 rounded">Approve</button>
-                      <button onclick="rejectWithdrawal(${w.id})" class="bg-red-500 text-white px-2 py-1 rounded">Reject</button>
-                    ` : "—"}
-                  </td>
-                </tr>`).join("")}
-            </tbody>
-          </table>`;
-      } catch (err) {
-        console.error(err);
-        withdrawalList.innerHTML = `<p class="text-red-500">Error loading withdrawals</p>`;
-      }
-    }
+    const formatMoney = (amount) =>
+      "₦" + Number(amount).toLocaleString("en-NG", { minimumFractionDigits: 2 });
 
-    async function approveWithdrawal(id) {
-      if (!confirm("Mark as paid?")) return;
-      try {
-        await apiFetch(`${API_BASE}/${id}/approve`, { method: "POST" });
-        loadWithdrawals();
-      } catch (err) {
-        alert("❌ Error approving withdrawal");
+    async function loadProfile() {
+      const token = getToken();
+      if (!token) {
+        alert("⚠ Please login first.");
+        window.location.href = "index.html";
+        return;
       }
-    }
-
-    async function rejectWithdrawal(id) {
-      if (!confirm("Reject and refund user?")) return;
       try {
-        await apiFetch(`${API_BASE}/${id}/reject`, { method: "POST" });
-        loadWithdrawals();
-      } catch (err) {
-        alert("❌ Error rejecting withdrawal");
-      }
-    }
-
-    /* ==========================================================
-      🏆 LOAD ROUNDS
-    ========================================================== */
-    async function loadRounds() {
-      try {
-        const res = await fetch(`/api/dashboard/rounds`);
+        showSpinner();
+        const res = await fetch(`${API_URL}/dashboard`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error("Bad response from server");
         const data = await res.json();
-        roundsList.innerHTML = `
-          <table class="min-w-full text-left border">
-            <thead class="bg-gray-200">
-              <tr>
-                <th class="p-2">Name</th>
-                <th class="p-2">Status</th>
-                <th class="p-2">Start</th>
-                <th class="p-2">End</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${data.length === 0 ? `<tr><td colspan="4" class="p-3 text-center text-gray-500">No rounds yet</td></tr>` :
-                data.map(r => `
-                <tr class="border-t">
-                  <td class="p-2">${r.name}</td>
-                  <td class="p-2">${r.status}</td>
-                  <td class="p-2">${new Date(r.start_time).toLocaleString()}</td>
-                  <td class="p-2">${new Date(r.end_time).toLocaleString()}</td>
-                </tr>`).join("")}
-            </tbody>
-          </table>`;
+
+        const username = data.user?.username || "User";
+        document.getElementById("username").innerText = username;
+        document.getElementById("balance").innerText = formatMoney(data.balance || 0);
+        document.getElementById("avatar").innerText = username.charAt(0).toUpperCase();
       } catch (err) {
-        console.error(err);
-        roundsList.innerHTML = `<p class="text-red-500">Error loading rounds</p>`;
+        console.error("❌ Profile fetch error:", err);
+        alert("❌ Error loading profile data");
+      } finally {
+        hideSpinner();
       }
     }
+    loadProfile();
 
-    /* ==========================================================
-      🎫 LOAD TICKETS
-    ========================================================== */
-    async function loadTickets() {
-      try {
-        const data = await apiFetch(`${API_BASE}/tickets`);
-        ticketsList.innerHTML = `
-          <table class="min-w-full text-left border">
-            <thead class="bg-gray-200">
-              <tr>
-                <th class="p-2">User</th>
-                <th class="p-2">Round</th>
-                <th class="p-2">Created</th>
-                <th class="p-2">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${data.length === 0 ? `<tr><td colspan="4" class="p-3 text-center text-gray-500">No tickets yet</td></tr>` :
-                data.map(t => `
-                <tr class="border-t">
-                  <td class="p-2">${t.username}</td>
-                  <td class="p-2">${t.round_name}</td>
-                  <td class="p-2">${new Date(t.created_at).toLocaleString()}</td>
-                  <td class="p-2 font-medium">${t.ticket_status}</td>
-                </tr>`).join("")}
-            </tbody>
-          </table>`;
-      } catch (err) {
-        console.error(err);
-        ticketsList.innerHTML = `<p class="text-red-500">Error loading tickets</p>`;
+    // Dropdown for How to Play
+    document.getElementById("howToPlayBtn").addEventListener("click", () => {
+      const content = document.getElementById("howToPlayContent");
+      const icon = document.getElementById("chevronIcon");
+      if (content.classList.contains("hidden")) {
+        content.classList.remove("hidden");
+        icon.setAttribute("data-feather", "chevron-up");
+      } else {
+        content.classList.add("hidden");
+        icon.setAttribute("data-feather", "chevron-down");
       }
-    }
-
-    // 🚀 INIT
-    loadRounds();
-    loadWithdrawals();
-    loadTickets();
+      feather.replace();
+    });
   </script>
 </body>
 </html>
