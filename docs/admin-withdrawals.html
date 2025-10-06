@@ -1,535 +1,259 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Admin • PremierPredict</title>
-  <meta name="theme-color" content="#2563eb" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard | PremierPredict</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/feather-icons"></script>
-  <style>
-    /* subtle custom */
-    .tab-btn.active { color: #1e40af; border-bottom: 2px solid #1e40af; }
-    .glass { background: rgba(255,255,255,0.8); backdrop-filter: blur(6px); }
-    .fade-enter { opacity: 0; transform: translateY(6px); }
-    .fade-enter-active { transition: all .22s ease-out; opacity: 1; transform: none; }
-  </style>
 </head>
-<body class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen text-slate-800">
+<body class="bg-gray-100">
+  <div class="flex flex-col min-h-screen">
+    <header class="bg-blue-700 text-white p-4 flex justify-between items-center">
+      <h1 class="text-xl font-bold">PremierPredict Admin</h1>
+      <button id="logoutBtn" class="bg-red-500 px-3 py-1 rounded">Logout</button>
+    </header>
 
-  <!-- Topbar -->
-  <header class="sticky top-0 z-40 bg-white/60 backdrop-blur-sm border-b border-slate-200">
-    <div class="max-w-6xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2L15 8H9L12 2Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
-        </div>
-        <div>
-          <div class="text-slate-900 font-semibold">PremierPredict — Admin</div>
-          <div class="text-xs text-slate-500">Control panel • rounds · results · withdrawals · tickets · wallets</div>
-        </div>
-      </div>
-
-      <div class="flex items-center gap-3">
-        <div id="adminName" class="text-sm text-slate-700">Admin</div>
-        <button id="logoutBtn" class="text-xs text-red-600 hover:underline">Logout</button>
-      </div>
-    </div>
-  </header>
-
-  <main class="max-w-6xl mx-auto px-4 md:px-6 py-8 space-y-8">
-
-    <!-- Tabs -->
-    <nav class="flex gap-4 items-end border-b pb-2">
-      <button class="tab-btn px-3 py-2 text-sm font-medium" data-tab="withdrawals">Withdrawals</button>
-      <button class="tab-btn px-3 py-2 text-sm font-medium" data-tab="rounds">Rounds</button>
-      <button class="tab-btn px-3 py-2 text-sm font-medium" data-tab="tickets">Tickets</button>
-      <button class="tab-btn px-3 py-2 text-sm font-medium" data-tab="wallets">Wallets</button>
-      <div class="ml-auto text-xs text-slate-500">Signed in as <span id="whoami" class="font-medium ml-1">—</span></div>
-    </nav>
-
-    <!-- Panels -->
-    <section id="panels" class="space-y-6">
-
-      <!-- Withdrawals Panel -->
-      <section id="withdrawals" class="panel card glass rounded-lg p-5 shadow-sm">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold">Withdrawals</h3>
-          <div class="text-sm text-slate-500">Approve or reject user withdrawal requests</div>
-        </div>
-
-        <div id="withdrawalsBox" class="space-y-3">
-          <div id="withdrawalsLoading" class="text-sm text-slate-500">Loading withdrawals…</div>
-          <div class="overflow-x-auto">
-            <table class="min-w-full text-sm">
-              <thead class="text-slate-600 text-xs uppercase">
-                <tr>
-                  <th class="p-2 text-left">#</th>
-                  <th class="p-2 text-left">User</th>
-                  <th class="p-2 text-left">Bank</th>
-                  <th class="p-2 text-left">Account</th>
-                  <th class="p-2 text-right">Amount</th>
-                  <th class="p-2 text-left">Status</th>
-                  <th class="p-2 text-left">Date</th>
-                  <th class="p-2 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody id="withdrawalsTable" class="divide-y"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- Rounds Panel -->
-      <section id="rounds" class="panel card glass rounded-lg p-5 shadow-sm hidden">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold">Rounds</h3>
-          <div class="flex gap-2">
-            <input id="newRoundName" placeholder="New round name (e.g. EPL Week 7)" class="px-3 py-2 border rounded-md text-sm" />
-            <button id="createRoundBtn" class="bg-indigo-600 text-white px-3 py-2 rounded-md text-sm">Create round</button>
-          </div>
-        </div>
-
-        <div id="roundsList" class="space-y-3">
-          <div id="roundsLoading" class="text-sm text-slate-500">Loading rounds…</div>
-        </div>
-      </section>
-
-      <!-- Tickets Panel -->
-      <section id="tickets" class="panel card glass rounded-lg p-5 shadow-sm hidden">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold">Tickets</h3>
-          <div class="text-sm text-slate-500">Shows pending and won tickets</div>
-        </div>
-
-        <div id="ticketsBox">
-          <div id="ticketsLoading" class="text-sm text-slate-500">Loading tickets…</div>
-          <div id="ticketsList" class="space-y-2 mt-3"></div>
-        </div>
-      </section>
-
-      <!-- Wallets Panel -->
-      <section id="wallets" class="panel card glass rounded-lg p-5 shadow-sm hidden">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold">Wallets</h3>
-          <div class="text-sm text-slate-500">Adjust a user's balance (credit or debit)</div>
-        </div>
-
-        <form id="walletForm" class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-          <div>
-            <label class="text-xs text-slate-600">User ID</label>
-            <input id="walletUserId" type="number" class="mt-1 w-full px-3 py-2 border rounded-md" placeholder="123" required />
-          </div>
-          <div>
-            <label class="text-xs text-slate-600">Amount (₦)</label>
-            <input id="walletAmount" type="number" step="0.01" class="mt-1 w-full px-3 py-2 border rounded-md" placeholder="500.00" required />
-          </div>
-          <div>
-            <button class="bg-emerald-600 text-white px-3 py-2 rounded-md" type="submit">Update balance</button>
-            <div id="walletMsg" class="text-sm text-slate-500 mt-2"></div>
-          </div>
+    <main class="p-4 flex-1 space-y-6">
+      <!-- ROUNDS MANAGEMENT -->
+      <section class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-3">🏆 Manage Jackpot Rounds</h2>
+        <form id="newRoundForm" class="flex gap-2 flex-wrap mb-3">
+          <input type="text" id="roundName" placeholder="Round name" class="border p-2 rounded w-full sm:w-1/4">
+          <input type="datetime-local" id="startTime" class="border p-2 rounded w-full sm:w-1/4">
+          <input type="datetime-local" id="endTime" class="border p-2 rounded w-full sm:w-1/4">
+          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Create Round</button>
         </form>
+        <div id="roundsList" class="overflow-x-auto"></div>
       </section>
 
-    </section>
+      <!-- WITHDRAWALS -->
+      <section class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-3">💸 Withdrawal Requests</h2>
+        <div id="withdrawalList" class="overflow-x-auto"></div>
+      </section>
 
-  </main>
+      <!-- USERS -->
+      <section class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-3">👤 Users & Wallets</h2>
+        <div id="usersList" class="overflow-x-auto"></div>
+      </section>
 
-  <!-- Results modal -->
-  <div id="resultsModal" class="fixed inset-0 z-50 hidden items-center justify-center">
-    <div class="absolute inset-0 bg-black/40" onclick="closeResultsModal()"></div>
-    <div class="relative bg-white rounded-lg shadow-lg w-full max-w-2xl p-5 z-10">
-      <div class="flex justify-between items-center mb-3">
-        <h4 id="resultsModalTitle" class="font-semibold">Update Results</h4>
-        <button class="text-slate-500" onclick="closeResultsModal()">✕</button>
-      </div>
-
-      <div id="matchesContainer" class="space-y-3 max-h-72 overflow-y-auto">
-        <!-- matches will be inserted here -->
-      </div>
-
-      <div class="mt-4 flex justify-end gap-2">
-        <button class="px-3 py-2 rounded-md border" onclick="closeResultsModal()">Cancel</button>
-        <button id="saveResultsBtn" class="px-4 py-2 rounded-md bg-indigo-600 text-white">Save results</button>
-      </div>
-    </div>
+      <!-- TICKETS -->
+      <section class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-3">🎫 Tickets per Round</h2>
+        <div id="ticketsList" class="overflow-x-auto"></div>
+      </section>
+    </main>
   </div>
 
   <script>
-  // =========== Config / Helpers ===========
-  const API = {
-    withdrawalsAdmin: "/api/withdrawals/admin",
-    withdrawApprove: (id) => `/api/withdrawals/${id}/approve`,
-    withdrawReject: (id) => `/api/withdrawals/${id}/reject`,
-    adminRounds: "/api/admin/rounds",
-    activateRound: (id) => `/api/admin/rounds/${id}/activate`,
-    adminResults: (id) => `/api/admin/results/${id}`,
-    adminTickets: "/api/admin/tickets",
-    adjustWallet: (id) => `/api/admin/users/${id}/balance`,
-    jackpotMatchesByRound: (roundId) => `/api/jackpot/matches?round_id=${roundId}`, // optional endpoint - graceful fallback if missing
-  };
+    const API_BASE = "/api"; // Adjust if hosted differently
+    const token = localStorage.getItem("token");
 
-  const spinner = document.getElementById('spinner');
-  const showSpinner = () => spinner.classList.remove('hidden');
-  const hideSpinner = () => spinner.classList.add('hidden');
-
-  function getAuthHeader() {
-    const token = localStorage.getItem('token');
-    return token ? { 'Authorization': 'Bearer ' + token } : {};
-  }
-
-  function fmtMoney(koboOrNaira) {
-    // if number > 1000 maybe kobo? the server uses amount_kobo for DB responses
-    if (typeof koboOrNaira !== 'number') return koboOrNaira;
-    // detect likely kobo: big ints -> use divide by 100
-    return '₦' + (koboOrNaira > 10000 ? (koboOrNaira / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 }) : koboOrNaira.toFixed(2));
-  }
-
-  // set active tab
-  function setActiveTab(tabName) {
-    document.querySelectorAll('.tab-btn').forEach(b => {
-      b.classList.toggle('active', b.dataset.tab === tabName);
-    });
-    document.querySelectorAll('.panel').forEach(p => p.classList.add('hidden'));
-    document.getElementById(tabName).classList.remove('hidden');
-  }
-
-  // attach tab buttons
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tab = btn.dataset.tab;
-      setActiveTab(tab);
-      if (tab === 'withdrawals') loadWithdrawals();
-      if (tab === 'rounds') loadRounds();
-      if (tab === 'tickets') loadTickets();
-      if (tab === 'wallets') { /* nothing extra */ }
-    });
-  });
-
-  // logout
-  document.getElementById('logoutBtn').addEventListener('click', () => {
-    localStorage.removeItem('token');
-    location.reload();
-  });
-
-  // whoami (try to read token payload if present)
-  (function whoami() {
-    const token = localStorage.getItem('token');
-    if (!token) { document.getElementById('whoami').textContent = '—'; return; }
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      document.getElementById('whoami').textContent = payload.username || payload.email || 'admin';
-      document.getElementById('adminName').textContent = payload.username || 'Admin';
-    } catch (e) {
-      document.getElementById('whoami').textContent = 'admin';
+    // --- Redirect if not logged in ---
+    if (!token) {
+      alert("You must be logged in as admin");
+      window.location.href = "/login.html";
     }
-  })();
 
-  // =========== Withdrawals ===========
-  async function loadWithdrawals() {
-    const box = document.getElementById('withdrawalsTable');
-    const loading = document.getElementById('withdrawalsLoading');
-    loading.style.display = 'block';
-    box.innerHTML = '';
-    try {
-      const res = await fetch(API.withdrawalsAdmin, { headers: { ...getAuthHeader() } });
-      if (!res.ok) throw new Error('Failed to load');
-      const data = await res.json();
-      if (!Array.isArray(data) || data.length === 0) {
-        box.innerHTML = '<tr><td colspan="8" class="p-4 text-slate-500">No withdrawal requests</td></tr>';
-      } else {
-        box.innerHTML = data.map((w, idx) => `
-          <tr class="align-top">
-            <td class="p-2">${idx+1}</td>
-            <td class="p-2">${escapeHtml(w.username)}</td>
-            <td class="p-2">${escapeHtml(w.bank_name)}</td>
-            <td class="p-2">${escapeHtml(w.account_number)}</td>
-            <td class="p-2 text-right font-semibold">${fmtMoney(w.amount_kobo)}</td>
-            <td class="p-2">${escapeHtml(w.status)}</td>
-            <td class="p-2">${new Date(w.created_at).toLocaleString()}</td>
-            <td class="p-2 text-right">
-              ${w.status === 'pending' ? `<button class="px-3 py-1 rounded bg-green-600 text-white mr-2" onclick="approveWithdraw(${w.id})">Approve</button>
-              <button class="px-3 py-1 rounded bg-red-600 text-white" onclick="rejectWithdraw(${w.id})">Reject</button>` : ''}
-            </td>
-          </tr>
-        `).join('');
-      }
-    } catch (err) {
-      console.error('withdrawals error', err);
-      box.innerHTML = `<tr><td colspan="8" class="p-4 text-rose-600">Error loading withdrawals</td></tr>`;
-    } finally {
-      loading.style.display = 'none';
-    }
-  }
-
-  async function approveWithdraw(id) {
-    if (!confirm('Mark withdrawal as PAID?')) return;
-    showSpinner();
-    try {
-      const res = await fetch(API.withdrawApprove(id), { method: 'POST', headers: { ...getAuthHeader() } });
-      if (!res.ok) throw new Error('Failed');
-      alert('Marked as paid');
-      loadWithdrawals();
-    } catch (err) {
-      alert('Error approving');
-      console.error(err);
-    } finally { hideSpinner(); }
-  }
-
-  async function rejectWithdraw(id) {
-    if (!confirm('Reject and refund to user wallet?')) return;
-    showSpinner();
-    try {
-      const res = await fetch(API.withdrawReject(id), { method: 'POST', headers: { ...getAuthHeader() } });
-      if (!res.ok) throw new Error('Failed');
-      alert('Rejected and refunded');
-      loadWithdrawals();
-    } catch (err) {
-      alert('Error rejecting');
-      console.error(err);
-    } finally { hideSpinner(); }
-  }
-
-  // =========== Rounds ===========
-  async function loadRounds() {
-    const list = document.getElementById('roundsList');
-    const loading = document.getElementById('roundsLoading');
-    loading.style.display = 'block';
-    list.innerHTML = '';
-    try {
-      const res = await fetch(API.adminRounds, { headers: { ...getAuthHeader() } });
-      if (!res.ok) throw new Error('failed rounds');
-      const rounds = await res.json();
-      if (!Array.isArray(rounds) || rounds.length === 0) {
-        list.innerHTML = `<div class="p-4 text-slate-500">No rounds found</div>`;
-        return;
-      }
-
-      list.innerHTML = rounds.map(r => `
-        <div class="flex justify-between items-center p-3 border-b last:border-b-0">
-          <div>
-            <div class="text-sm font-semibold">${escapeHtml(r.name)}</div>
-            <div class="text-xs text-slate-500">${r.is_active ? '🟢 Active' : '⚪ Inactive'} • ${r.status || ''}</div>
-            <div class="text-xs text-slate-400 mt-1">${r.start_time ? new Date(r.start_time).toLocaleString() : ''} ${r.end_time ? '– ' + new Date(r.end_time).toLocaleString() : ''}</div>
-          </div>
-          <div class="flex gap-2">
-            <button class="px-3 py-1 bg-emerald-600 text-white rounded" onclick="activateRound(${r.id})">Activate</button>
-            <button class="px-3 py-1 bg-indigo-600 text-white rounded" onclick="openResultsEditor(${r.id}, '${escapeHtml(r.name)}')">Update Results</button>
-          </div>
-        </div>
-      `).join('');
-    } catch (err) {
-      console.error('rounds error', err);
-      list.innerHTML = `<div class="p-4 text-rose-600">Error loading rounds</div>`;
-    } finally { loading.style.display = 'none'; }
-  }
-
-  document.getElementById('createRoundBtn').addEventListener('click', async () => {
-    const name = document.getElementById('newRoundName').value.trim();
-    if (!name) return alert('Enter a round name');
-    showSpinner();
-    try {
-      const res = await fetch(API.adminRounds, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-        body: JSON.stringify({ name })
+    // --- Helper for Fetch with Auth ---
+    async function apiFetch(url, options = {}) {
+      const res = await fetch(url, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          ...(options.headers || {}),
+        },
       });
-      if (!res.ok) throw new Error('create failed');
-      document.getElementById('newRoundName').value = '';
-      await loadRounds();
-      alert('Round created');
-    } catch (err) {
-      alert('Error creating round');
-      console.error(err);
-    } finally { hideSpinner(); }
-  });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    }
 
-  async function activateRound(id) {
-    if (!confirm('Activate this round? This will deactivate others.')) return;
-    showSpinner();
-    try {
-      const res = await fetch(`${API.adminRounds}/${id}/activate`, { method: 'POST', headers: { ...getAuthHeader() } });
-      if (!res.ok) throw new Error('activate failed');
-      await loadRounds();
-      alert('Activated');
-    } catch (err) {
-      alert('Error activating');
-      console.error(err);
-    } finally { hideSpinner(); }
-  }
-  // =========== Results editor (modal) ===========
-  let currentRoundId = null;
-  function openResultsEditor(roundId, roundName) {
-    currentRoundId = roundId;
-    document.getElementById('resultsModalTitle').textContent = `Update Results — ${roundName || 'Round ' + roundId}`;
-    document.getElementById('matchesContainer').innerHTML = '<div class="text-sm text-slate-500">Loading matches…</div>';
-    document.getElementById('resultsModal').classList.remove('hidden');
-    // try to load matches for round
-    (async () => {
+    /* ==========================================================
+      🏆 CREATE ROUND
+    ========================================================== */
+    document.getElementById("newRoundForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = roundName.value;
+      const start_time = startTime.value;
+      const end_time = endTime.value;
       try {
-        const res = await fetch(API.jackpotMatchesByRound(roundId), { headers: { ...getAuthHeader() } });
-        if (!res.ok) {
-          // fallback: show JSON input area
-          document.getElementById('matchesContainer').innerHTML = renderJsonFallback();
-          return;
-        }
-        const matches = await res.json();
-        if (!Array.isArray(matches) || matches.length === 0) {
-          document.getElementById('matchesContainer').innerHTML = renderJsonFallback();
-          return;
-        }
-        // render match controls
-        document.getElementById('matchesContainer').innerHTML = matches.map(m => `
-          <div class="flex items-center gap-3 p-2 border rounded">
-            <div class="flex-1 text-sm">
-              <div class="font-medium">${escapeHtml(m.home_team)} vs ${escapeHtml(m.away_team)}</div>
-              <div class="text-xs text-slate-400">${m.start_time ? new Date(m.start_time).toLocaleString() : ''}</div>
-            </div>
-            <div class="flex gap-1">
-              <label class="inline-flex items-center px-2 py-1 border rounded cursor-pointer">
-                <input type="radio" name="match_${m.id}" value="H" ${m.result === 'H' ? 'checked' : ''} /> <span class="ml-2 text-xs">H</span>
-              </label>
-              <label class="inline-flex items-center px-2 py-1 border rounded cursor-pointer">
-                <input type="radio" name="match_${m.id}" value="D" ${m.result === 'D' ? 'checked' : ''} /> <span class="ml-2 text-xs">D</span>
-              </label>
-              <label class="inline-flex items-center px-2 py-1 border rounded cursor-pointer">
-                <input type="radio" name="match_${m.id}" value="A" ${m.result === 'A' ? 'checked' : ''} /> <span class="ml-2 text-xs">A</span>
-              </label>
-            </div>
-          </div>
-        `).join('');
-      } catch (err) {
-        console.error('matches fetch', err);
-        document.getElementById('matchesContainer').innerHTML = renderJsonFallback();
-      }
-    })();
-  }
-
-  function renderJsonFallback() {
-    return `
-      <div class="text-sm text-slate-600">No match endpoint available. Paste results JSON below (format: [{"match_id":1,"result":"H"},...])</div>
-      <textarea id="resultsJsonInput" class="mt-2 w-full border p-2 rounded h-36 text-xs" placeholder='[{"match_id":1,"result":"H"}]'></textarea>
-    `;
-  }
-
-  document.getElementById('saveResultsBtn').addEventListener('click', async () => {
-    if (!currentRoundId) return;
-    showSpinner();
-    try {
-      // if we have radio inputs -> collect them
-      const radios = document.querySelectorAll('#matchesContainer input[type="radio"]');
-      let payload = null;
-      if (radios.length > 0) {
-        const map = {};
-        radios.forEach(r => {
-          const name = r.name; // match_#
-          const id = name.split('_')[1];
-          if (!map[id]) map[id] = null;
-          if (r.checked) map[id] = r.value;
+        await apiFetch(`${API_BASE}/withdrawals/rounds`, {
+          method: "POST",
+          body: JSON.stringify({ name, start_time, end_time }),
         });
-        const results = Object.entries(map).map(([match_id, result]) => ({ match_id: Number(match_id), result }));
-        payload = { results };
-      } else {
-        // fallback to JSON input
-        const txt = document.getElementById('resultsJsonInput')?.value;
-        if (!txt) throw new Error('No results provided');
-        payload = { results: JSON.parse(txt) };
+        alert("New round created");
+        loadRounds();
+      } catch (err) {
+        alert("Error creating round");
+        console.error(err);
       }
+    });
 
-      const res = await fetch(API.adminResults(currentRoundId), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw new Error('save failed');
-      alert('Results updated');
-      closeResultsModal();
-      // after results updated, consider reloading tickets to reflect wins
-      loadTickets();
-    } catch (err) {
-      alert('Error saving results: ' + (err.message || ''));
-      console.error(err);
-    } finally { hideSpinner(); }
-  });
-
-  function closeResultsModal() {
-    document.getElementById('resultsModal').classList.add('hidden');
-    currentRoundId = null;
-    document.getElementById('matchesContainer').innerHTML = '';
-  }
-
-  // =========== Tickets ===========
-  async function loadTickets() {
-    const list = document.getElementById('ticketsList');
-    const loading = document.getElementById('ticketsLoading');
-    loading.style.display = 'block';
-    list.innerHTML = '';
-    try {
-      const res = await fetch(API.adminTickets, { headers: { ...getAuthHeader() } });
-      if (!res.ok) throw new Error('tickets fetch failed');
-      const data = await res.json();
-      if (!Array.isArray(data) || data.length === 0) {
-        list.innerHTML = '<div class="p-4 text-slate-500">No tickets found</div>';
-        return;
+    /* ==========================================================
+      💸 LOAD WITHDRAWALS
+    ========================================================== */
+    async function loadWithdrawals() {
+      try {
+        const data = await apiFetch(`${API_BASE}/withdrawals/admin`);
+        withdrawalList.innerHTML = `
+          <table class="min-w-full text-sm text-left">
+            <thead>
+              <tr class="bg-gray-200">
+                <th class="p-2">User</th>
+                <th class="p-2">Bank</th>
+                <th class="p-2">Amount</th>
+                <th class="p-2">Status</th>
+                <th class="p-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.map(w => `
+                <tr class="border-b">
+                  <td class="p-2">${w.username}</td>
+                  <td class="p-2">${w.bank_name}</td>
+                  <td class="p-2">₦${(w.amount_kobo/100).toFixed(2)}</td>
+                  <td class="p-2">${w.status}</td>
+                  <td class="p-2">
+                    ${w.status === "pending" ? `
+                      <button class="bg-green-500 text-white px-2 py-1 rounded" onclick="approveWithdrawal(${w.id})">Approve</button>
+                      <button class="bg-red-500 text-white px-2 py-1 rounded" onclick="rejectWithdrawal(${w.id})">Reject</button>
+                    ` : "—"}
+                  </td>
+                </tr>`).join("")}
+            </tbody>
+          </table>`;
+      } catch (err) {
+        console.error(err);
+        withdrawalList.innerHTML = "Error loading withdrawals";
       }
+    }
 
-      list.innerHTML = data.map(t => `
-        <div class="p-3 border-b flex justify-between items-center">
-          <div>
-            <div class="font-medium">${escapeHtml(t.username)}</div>
-            <div class="text-xs text-slate-500">${escapeHtml(t.round_name || 'Round ' + t.round_id)}</div>
-            <div class="text-xs mt-1">${t.ticket_status ? t.ticket_status.toUpperCase() : ''}</div>
-          </div>
-          <div class="text-xs text-slate-400">${new Date(t.created_at).toLocaleString()}</div>
-        </div>
-      `).join('');
-    } catch (err) {
-      list.innerHTML = `<div class="p-4 text-rose-600">Error loading tickets</div>`;
-      console.error(err);
-    } finally { loading.style.display = 'none'; }
-  }
+    async function approveWithdrawal(id) {
+      if (confirm("Mark as paid?")) {
+        await apiFetch(`${API_BASE}/withdrawals/${id}/approve`, { method: "POST" });
+        loadWithdrawals();
+      }
+    }
 
-  // =========== Wallet adjustment ===========
-  document.getElementById('walletForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const id = document.getElementById('walletUserId').value;
-    const amount = Number(document.getElementById('walletAmount').value);
-    const msg = document.getElementById('walletMsg');
-    if (!id || isNaN(amount)) { msg.textContent = 'Provide valid id and amount'; return; }
-    showSpinner();
-    try {
-      const res = await fetch(API.adjustWallet(id), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-        body: JSON.stringify({ amount })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'update failed');
-      msg.textContent = data.message || 'Balance updated';
-      document.getElementById('walletUserId').value = ''; document.getElementById('walletAmount').value = '';
-    } catch (err) {
-      msg.textContent = 'Error updating balance';
-      console.error(err);
-    } finally { hideSpinner(); }
-  });
+    async function rejectWithdrawal(id) {
+      if (confirm("Reject and refund?")) {
+        await apiFetch(`${API_BASE}/withdrawals/${id}/reject`, { method: "POST" });
+        loadWithdrawals();
+      }
+    }
 
-  // =========== Utils ===========
-  function escapeHtml(str = '') {
-    return String(str)
-      .replaceAll('&','&amp;')
-      .replaceAll('<','&lt;')
-      .replaceAll('>','&gt;')
-      .replaceAll('"','&quot;')
-      .replaceAll("'", '&#39;');
-  }
+    /* ==========================================================
+      🏆 LOAD ROUNDS
+    ========================================================== */
+    async function loadRounds() {
+      try {
+        const data = await apiFetch(`${API_BASE}/dashboard/rounds`);
+        roundsList.innerHTML = `
+          <table class="min-w-full text-sm text-left">
+            <thead><tr class="bg-gray-200">
+              <th class="p-2">Name</th><th class="p-2">Status</th><th class="p-2">Start</th><th class="p-2">End</th>
+            </tr></thead>
+            <tbody>
+              ${data.map(r => `
+                <tr class="border-b">
+                  <td class="p-2">${r.name}</td>
+                  <td class="p-2">${r.status}</td>
+                  <td class="p-2">${new Date(r.start_time).toLocaleString()}</td>
+                  <td class="p-2">${new Date(r.end_time).toLocaleString()}</td>
+                </tr>`).join("")}
+            </tbody>
+          </table>`;
+      } catch (err) {
+        console.error(err);
+        roundsList.innerHTML = "Error loading rounds";
+      }
+    }
 
-  // init default tab
-  setActiveTab('withdrawals');
-  loadWithdrawals();
+    /* ==========================================================
+      👤 LOAD USERS
+    ========================================================== */
+    async function loadUsers() {
+      try {
+        const data = await apiFetch(`${API_BASE}/dashboard/users`);
+        usersList.innerHTML = `
+          <table class="min-w-full text-sm text-left">
+            <thead><tr class="bg-gray-200">
+              <th class="p-2">Username</th><th class="p-2">Email</th><th class="p-2">Balance</th><th class="p-2">Action</th>
+            </tr></thead>
+            <tbody>
+              ${data.map(u => `
+                <tr class="border-b">
+                  <td class="p-2">${u.username}</td>
+                  <td class="p-2">${u.email}</td>
+                  <td class="p-2">₦${(u.balance_kobo / 100).toFixed(2)}</td>
+                  <td class="p-2">
+                    <button class="bg-yellow-500 text-white px-2 py-1 rounded" onclick="updateBalance(${u.id})">Update</button>
+                  </td>
+                </tr>`).join("")}
+            </tbody>
+          </table>`;
+      } catch (err) {
+        console.error(err);
+        usersList.innerHTML = "Error loading users";
+      }
+    }
 
-  // keyboard: Esc closes modal
-  window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeResultsModal(); });
+    async function updateBalance(userId) {
+      const amount = prompt("Enter new balance (₦):");
+      if (!amount) return;
+      try {
+        await apiFetch(`${API_BASE}/dashboard/users/${userId}/balance`, {
+          method: "PUT",
+          body: JSON.stringify({ amount }),
+        });
+        alert("Balance updated");
+        loadUsers();
+      } catch (err) {
+        alert("Error updating balance");
+      }
+    }
 
+    /* ==========================================================
+      🎫 LOAD TICKETS
+    ========================================================== */
+    async function loadTickets() {
+      try {
+        const data = await apiFetch(`${API_BASE}/withdrawals/tickets`);
+        ticketsList.innerHTML = `
+          <table class="min-w-full text-sm text-left">
+            <thead><tr class="bg-gray-200">
+              <th class="p-2">User</th><th class="p-2">Round</th><th class="p-2">Created</th><th class="p-2">Status</th>
+            </tr></thead>
+            <tbody>
+              ${data.map(t => `
+                <tr class="border-b">
+                  <td class="p-2">${t.username}</td>
+                  <td class="p-2">${t.round_name}</td>
+                  <td class="p-2">${new Date(t.created_at).toLocaleString()}</td>
+                  <td class="p-2">${t.ticket_status}</td>
+                </tr>`).join("")}
+            </tbody>
+          </table>`;
+      } catch (err) {
+        console.error(err);
+        ticketsList.innerHTML = "Error loading tickets";
+      }
+    }
+
+    /* ==========================================================
+      🚀 INIT
+    ========================================================== */
+    loadRounds();
+    loadWithdrawals();
+    loadUsers();
+    loadTickets();
+
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      localStorage.removeItem("token");
+      window.location.href = "/login.html";
+    });
   </script>
 </body>
-</html>
+  </html>
