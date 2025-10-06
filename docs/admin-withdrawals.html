@@ -41,16 +41,26 @@
   </main>
 
   <script>
-    // Base URLs for each section
-    const ROUND_API = "/api/admin/rounds";
-    const WITHDRAWAL_API = "/api/admin/withdrawals";
-    const TICKETS_API = "/api/admin/tickets";
+    // ✅ FIXED API ENDPOINTS (match your backend)
+    const BASE_URL = "https://premierpredict.onrender.com";
+    const ROUND_API = `${BASE_URL}/api/withdrawals/rounds`;
+    const WITHDRAWAL_API = `${BASE_URL}/api/withdrawals/admin`;
+    const TICKETS_API = `${BASE_URL}/api/withdrawals/tickets`;
 
-    // Helper fetch
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("⚠ Please log in as admin first.");
+      window.location.href = "index.html";
+    }
+
+    // Helper fetch with Authorization
     async function apiFetch(url, options = {}) {
       const res = await fetch(url, {
         ...options,
-        headers: { "Content-Type": "application/json" }
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
       });
       if (!res.ok) throw new Error(await res.text());
       return res.json();
@@ -129,9 +139,9 @@
     async function approveWithdrawal(id) {
       if (!confirm("Mark this withdrawal as approved?")) return;
       try {
-        await apiFetch(`${WITHDRAWAL_API}/${id}/approve`, { method: "POST" });
+        await apiFetch(`${BASE_URL}/api/withdrawals/${id}/approve`, { method: "POST" });
         loadWithdrawals();
-      } catch (err) {
+      } catch {
         alert("Error approving withdrawal");
       }
     }
@@ -139,9 +149,9 @@
     async function rejectWithdrawal(id) {
       if (!confirm("Reject and refund this withdrawal?")) return;
       try {
-        await apiFetch(`${WITHDRAWAL_API}/${id}/reject`, { method: "POST" });
+        await apiFetch(`${BASE_URL}/api/withdrawals/${id}/reject`, { method: "POST" });
         loadWithdrawals();
-      } catch (err) {
+      } catch {
         alert("Error rejecting withdrawal");
       }
     }
@@ -210,7 +220,7 @@
                   <td class="p-2">${t.username}</td>
                   <td class="p-2">${t.round_name}</td>
                   <td class="p-2">${new Date(t.created_at).toLocaleString()}</td>
-                  <td class="p-2">${t.status}</td>
+                  <td class="p-2">${t.ticket_status}</td>
                 </tr>
               `).join("")}
             </tbody>
