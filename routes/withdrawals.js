@@ -113,5 +113,23 @@ router.post("/:id/reject", async (req, res) => {
     res.status(500).json({ error: "Error rejecting withdrawal" });
   }
 });
+/* -------------------------------------------
+   5️⃣  USER: Get Withdrawal History
+-------------------------------------------- */
+router.get("/history", authMiddleware, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, amount_kobo, bank_name, account_number, status, created_at
+       FROM withdrawals
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [req.user.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch history" });
+  }
+});
 
 export default router;
