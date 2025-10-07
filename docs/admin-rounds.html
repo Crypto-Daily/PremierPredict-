@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Jackpot Rounds</title>
+  <title>Admin Rounds</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 p-6">
@@ -26,8 +26,11 @@
       rounds.forEach(r => {
         const div = document.createElement("div");
         div.className = "bg-white p-4 rounded shadow";
+
+        const matchesContainerId = `matches-${r.id}`;
+
         div.innerHTML = `
-          <div class="flex justify-between items-center">
+          <div class="flex justify-between items-center cursor-pointer" onclick="toggleMatches(${r.id})">
             <div>
               <h2 class="text-lg font-semibold">${r.name}</h2>
               <p class="text-sm text-gray-600">
@@ -39,9 +42,82 @@
               ${r.is_active ? 'Active' : 'Inactive'}
             </span>
           </div>
+          <div id="${matchesContainerId}" class="hidden mt-4 border-t pt-3"></div>
         `;
+
         container.appendChild(div);
       });
+    }
+
+    async function toggleMatches(roundId) {
+      const container = document.getElementById(`matches-${roundId}`);
+
+      if (!container.classList.contains("hidden")) {
+        container.classList.add("hidden");
+        container.innerHTML = "";
+        return;
+      }
+
+      // Fetch matches
+      const res = await fetch(`/api/admin/rounds/${roundId}/matches`);
+      const matches = await res.json();
+
+      let html = `
+        <table class="min-w-full text-sm text-left border">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="p-2">ID</th>
+              <th class="p-2">Home</th>
+              <th class="p-2">Away</th>
+              <th class="p-2">Result</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      matches.forEach(m => {
+        html += `
+          <tr class="border-t">
+            <td class="p-2">${m.id}</td>
+            <td class="p-2">${m.home_team}</td>
+            <td class="p-2">${m.away_team}</td>
+            <td class="p-2">
+              <input type="text" maxlength="1" class="border p-1 w-12 text-center" value="${m.result || ''}" data-match-id="${m.id}" />
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `
+          </tbody>
+        </table>
+        <button onclick="updateResults(${roundId})" class="mt-3 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Update Results</button>
+      `;
+
+      container.innerHTML = html;
+      container.classList.remove("hidden");
+    }
+
+    async function updateResults(roundId) {
+      const container = document.getElementById(`matches-${roundId}`);
+      const inputs = container.querySelectorAll("input[data-match-id]");
+      const matches = Array.from(inputs).map(i => ({
+        id: Number(i.getAttribute("data-match-id")),
+        result: i.value.trim().toUpperCase()
+      }));
+
+      const res = await fetch(`/api/admin/rounds/${roundId}/update-results`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ matches })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        alert("✅ Results updated successfully!");
+      } else {
+        alert("❌ Error updating results.");
+      }
     }
 
     fetchRounds();
