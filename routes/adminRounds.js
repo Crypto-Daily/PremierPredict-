@@ -1,123 +1,112 @@
+// routes/adminRounds.js
 import express from "express";
 import pool from "../db.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Admin access middleware
-async function adminOnly(req, res, next) {
-  if (!req.user?.is_admin) {
-    return res.status(403).json({ error: "Admin access required" });
+// --- Get all rounds and matches
+router.get("/rounds", authMiddleware, async (req, res) => {
+  try {
+    const rounds = await pool.query(`
+      SELECT id, name, is_active, start_time, end_time
+      FROM jackpot_rounds
+      ORDER BY id DESC
+    `);
+
+    const matches = await pool.query(`
+      SELECT id, round_id, home_team, away_team, match_time, result
+      FROM jackpot_matches
+      ORDER BY id ASC
+    `);
+
+    const data = rounds.rows.map(r => ({
+      ...r,
+      matches: matches.rows.filter(m => m.round_id === r.id),
+    }));
+
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error fetching rounds" });
   }
-  next();
-}
+});
 
-/* ───────────────────────────────
-   1️⃣  CREATE NEW ROUND (with matches)
-   ─────────────────────────────── */
-router.post("/rounds/full", authMiddleware, adminOnly, async (req, res) => {
-  const { name, matches } = req.body; // matches = [{home_team, away_team, match_time}]
+// --- Update match result
+router.put("/match/:id/result", authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const { result } = req.body;
+
+  try {
+    const valid = ["H", "D", "A"];
+    if (!valid.includes(result)) {
+      return res.status(400).json({ error: "Result must be H, D, or A" });
+    }
+
+    await pool.query(
+      "UPDATE jackpot_matches SET result = $1 WHERE id = $2",
+      [result, id]
+    );
+
+    res.json({ message: "Result updated successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error updating result" });
+  }
+});
+
+// --- Create new round
+router.post("/rounds", authMiddleware, async (req, res) => {
+  const { name, start_time, end_time, matches } = req.body;
+
+  if (!matches || matches.length !== 10) {
+    return res.status(400).json({ error: "Exactly 10 matches required" });
+  }
+
   const client = await pool.connect();
-
   try {
     await client.query("BEGIN");
 
     const roundRes = await client.query(
-      "INSERT INTO jackpot_rounds (name, is_active) VALUES ($1, false) RETURNING *",
-      [name]
+      `INSERT INTO jackpot_rounds (name, is_active, start_time, end_time)
+       VALUES ($1, TRUE, $2, $3)
+       RETURNING id`,
+      [name, start_time, end_time]
     );
-    const round = roundRes.rows[0];
+
+    const roundId = roundRes.rows[0].id;
 
     for (const m of matches) {
       await client.query(
         `INSERT INTO jackpot_matches (round_id, home_team, away_team, match_time)
          VALUES ($1, $2, $3, $4)`,
-        [round.id, m.home_team, m.away_team, m.match_time]
+        [roundId, m.home_team, m.away_team, m.match_time]
       );
     }
 
     await client.query("COMMIT");
-    res.json({ success: true, round });
+    res.json({ message: "Round created successfully", round_id: roundId });
   } catch (err) {
     await client.query("ROLLBACK");
     console.error(err);
-    res.status(500).json({ error: "Failed to create round with matches" });
+    res.status(500).json({ error: "Server error creating round" });
   } finally {
     client.release();
   }
 });
 
-/* ───────────────────────────────
-   2️⃣  UPDATE ALL RESULTS IN A ROUND
-   ─────────────────────────────── */
-router.put("/rounds/:id/results", authMiddleware, adminOnly, async (req, res) => {
+// --- Deactivate round
+router.put("/rounds/:id/deactivate", authMiddleware, async (req, res) => {
   const { id } = req.params;
-  const { results } = req.body; // [{match_id, result}]
-  const client = await pool.connect();
-
   try {
-    await client.query("BEGIN");
-
-    for (const r of results) {
-      if (!["H", "D", "A"].includes(r.result)) continue;
-      await client.query(
-        "UPDATE jackpot_matches SET result = $1 WHERE id = $2 AND round_id = $3",
-        [r.result, r.match_id, id]
-      );
-    }
-
-    await client.query("COMMIT");
-    res.json({ success: true, message: "Results updated" });
-  } catch (err) {
-    await client.query("ROLLBACK");
-    console.error(err);
-    res.status(500).json({ error: "Failed to update results" });
-  } finally {
-    client.release();
-  }
-});
-
-/* ───────────────────────────────
-   3️⃣  ACTIVATE / DEACTIVATE ROUND
-   ─────────────────────────────── */
-router.put("/rounds/:id/active", authMiddleware, adminOnly, async (req, res) => {
-  const { id } = req.params;
-  const { is_active } = req.body;
-  try {
-    const result = await pool.query(
-      "UPDATE jackpot_rounds SET is_active = $1 WHERE id = $2 RETURNING *",
-      [is_active, id]
+    await pool.query(
+      "UPDATE jackpot_rounds SET is_active = FALSE WHERE id = $1",
+      [id]
     );
-    res.json(result.rows[0]);
+    res.json({ message: "Round deactivated" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to update round status" });
-  }
-});
-
-/* ───────────────────────────────
-   4️⃣  VIEW ROUNDS (with matches)
-   ─────────────────────────────── */
-router.get("/rounds", authMiddleware, adminOnly, async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT r.id AS round_id, r.name, r.is_active,
-             json_agg(json_build_object(
-               'id', m.id,
-               'home_team', m.home_team,
-               'away_team', m.away_team,
-               'match_time', m.match_time,
-               'result', m.result
-             ) ORDER BY m.id) AS matches
-      FROM jackpot_rounds r
-      LEFT JOIN jackpot_matches m ON m.round_id = r.id
-      GROUP BY r.id
-      ORDER BY r.id DESC
-    `);
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to fetch rounds" });
+    res.status(500).json({ error: "Server error deactivating round" });
   }
 });
 
