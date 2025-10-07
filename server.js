@@ -9,6 +9,7 @@ import walletRoutes from "./routes/wallet.js";
 import jackpotRoutes from "./routes/jackpot.js";
 import dashboardRoutes from "./routes/dashboard.js";
 import withdrawalsRouter from "./routes/withdrawals.js";
+import adminRounds from "./routes/adminRounds.js";
 
 import { authMiddleware } from "./middleware/authMiddleware.js";
 
@@ -38,6 +39,7 @@ app.use("/api/wallet", walletRoutes);
 app.use("/api/jackpot", jackpotRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/withdrawals", withdrawalsRouter);
+app.use("/api/admin", adminRounds);
 
 /* -------------------------------------------
    🧪 Protected Test Route (optional)
