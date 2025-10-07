@@ -6,110 +6,128 @@
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 p-6">
-  <h1 class="text-2xl font-bold mb-6">🎯 Admin — Jackpot Rounds</h1>
+  <h1 class="text-2xl font-bold mb-4">⚽ Manage Jackpot Rounds</h1>
 
-  <!-- Create New Round -->
-  <section class="bg-white p-4 rounded shadow mb-6">
-    <h2 class="font-semibold mb-3">Create New Round (with Matches)</h2>
-    <input id="roundName" class="border p-2 rounded w-64" placeholder="Round Name (e.g. Round 9)" />
-    <textarea id="matchesInput" class="border p-2 rounded w-full mt-3 h-32" placeholder='Enter matches, one per line:
-Arsenal vs Chelsea, 2025-10-09 18:00
-Liverpool vs Man City, 2025-10-10 20:00'></textarea>
-    <button onclick="createFullRound()" class="bg-blue-600 text-white px-4 py-2 rounded mt-3">Create Round</button>
-  </section>
+  <div id="rounds-container" class="space-y-4"></div>
 
-  <!-- Update All Results -->
-  <section class="bg-white p-4 rounded shadow mb-6">
-    <h2 class="font-semibold mb-3">Update All Results for a Round</h2>
-    <input id="updateRoundId" class="border p-2 rounded w-24" placeholder="Round ID" />
-    <textarea id="resultsInput" class="border p-2 rounded w-full mt-3 h-32" placeholder='Enter results (H, D, A) with match IDs:
-1 H
-2 D
-3 A'></textarea>
-    <button onclick="updateAllResults()" class="bg-yellow-600 text-white px-4 py-2 rounded mt-3">Update Results</button>
-  </section>
+  <hr class="my-6">
 
-  <!-- Deactivate Round -->
-  <section class="bg-white p-4 rounded shadow mb-6">
-    <h2 class="font-semibold mb-3">Activate / Deactivate Round</h2>
-    <input id="toggleRoundId" class="border p-2 rounded w-24" placeholder="Round ID" />
-    <select id="toggleStatus" class="border p-2 rounded ml-2">
-      <option value="true">Activate</option>
-      <option value="false">Deactivate</option>
-    </select>
-    <button onclick="toggleRound()" class="bg-gray-700 text-white px-4 py-2 rounded ml-2">Update</button>
-  </section>
+  <h2 class="text-xl font-semibold mb-3">➕ Add New Round</h2>
+  <form id="newRoundForm" class="space-y-3">
+    <input type="text" id="roundName" placeholder="Round name (e.g. EPL Week 8)"
+      class="border p-2 w-full rounded" required>
 
-  <button onclick="loadRounds()" class="bg-green-700 text-white px-4 py-2 rounded mb-4">Refresh Rounds</button>
-  <div id="roundsList" class="space-y-4"></div>
+    <div class="grid grid-cols-2 gap-2">
+      <input type="datetime-local" id="startTime" class="border p-2 rounded" required>
+      <input type="datetime-local" id="endTime" class="border p-2 rounded" required>
+    </div>
+
+    <div id="matchTable" class="space-y-2"></div>
+    <button type="submit" class="bg-blue-600 text-white p-2 rounded">Create Round</button>
+  </form>
 
   <script>
-    const API = "/api/admin";
+    const EPL_TEAMS = [
+      "Arsenal","Aston Villa","Bournemouth","Brentford","Brighton",
+      "Chelsea","Crystal Palace","Everton","Fulham","Ipswich",
+      "Leicester","Liverpool","Luton","Man City","Man United",
+      "Newcastle","Nottingham Forest","Southampton","Tottenham","Wolves"
+    ];
 
-    async function createFullRound() {
-      const name = document.getElementById("roundName").value.trim();
-      const lines = document.getElementById("matchesInput").value.trim().split("\n");
-      const matches = lines.map(l => {
-        const [teams, time] = l.split(",");
-        const [home_team, away_team] = teams.split("vs").map(t => t.trim());
-        return { home_team, away_team, match_time: time.trim() };
-      });
-
-      await fetch(`${API}/rounds/full`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, matches })
-      });
-      alert("✅ Round created with matches");
-      loadRounds();
-    }
-
-    async function updateAllResults() {
-      const roundId = document.getElementById("updateRoundId").value;
-      const lines = document.getElementById("resultsInput").value.trim().split("\n");
-      const results = lines.map(l => {
-        const [match_id, result] = l.trim().split(" ");
-        return { match_id: +match_id, result };
-      });
-
-      await fetch(`${API}/rounds/${roundId}/results`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ results })
-      });
-      alert("✅ Results updated");
-      loadRounds();
-    }
-
-    async function toggleRound() {
-      const id = document.getElementById("toggleRoundId").value;
-      const is_active = document.getElementById("toggleStatus").value === "true";
-      await fetch(`${API}/rounds/${id}/active`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ is_active })
-      });
-      alert("✅ Round status updated");
-      loadRounds();
+    // Populate match form for new round
+    const matchTable = document.getElementById("matchTable");
+    for (let i = 1; i <= 10; i++) {
+      const row = document.createElement("div");
+      row.className = "grid grid-cols-3 gap-2";
+      row.innerHTML = `
+        <select class="home border p-2 rounded">${EPL_TEAMS.map(t => `<option>${t}</option>`).join('')}</select>
+        <select class="away border p-2 rounded">${EPL_TEAMS.map(t => `<option>${t}</option>`).join('')}</select>
+        <input type="datetime-local" class="time border p-2 rounded" required>
+      `;
+      matchTable.appendChild(row);
     }
 
     async function loadRounds() {
-      const res = await fetch(`${API}/rounds`);
-      const data = await res.json();
-      const div = document.getElementById("roundsList");
-      div.innerHTML = data.map(r => `
-        <div class="bg-white p-4 rounded shadow">
-          <h3 class="font-bold">${r.name} (ID: ${r.round_id}) ${r.is_active ? '🟢 Active' : '🔴 Inactive'}</h3>
-          <ul class="mt-2">
-            ${r.matches?.map(m => `
-              <li>${m.id}. ${m.home_team} vs ${m.away_team} — <b>${m.result || 'Pending'}</b></li>
-            `).join("")}
-          </ul>
-        </div>
-      `).join("");
+      const res = await fetch("/api/admin/rounds");
+      const rounds = await res.json();
+      const container = document.getElementById("rounds-container");
+      container.innerHTML = "";
+
+      rounds.forEach(r => {
+        const div = document.createElement("div");
+        div.className = "bg-white p-4 rounded shadow";
+        div.innerHTML = `
+          <details>
+            <summary class="cursor-pointer text-lg font-semibold">${r.name} 
+              ${r.is_active ? '<span class="text-green-600">(Active)</span>' : '<span class="text-gray-500">(Inactive)</span>'}
+            </summary>
+            <div class="mt-3 space-y-2">
+              ${r.matches.map(m => `
+                <div class="grid grid-cols-5 gap-2 items-center border-b pb-1">
+                  <div>${m.home_team}</div>
+                  <div>vs</div>
+                  <div>${m.away_team}</div>
+                  <input class="border p-1 rounded result" data-id="${m.id}" value="${m.result || ''}" placeholder="H/D/A" />
+                  <button class="update bg-blue-500 text-white px-2 py-1 rounded" data-id="${m.id}">Update</button>
+                </div>
+              `).join('')}
+              <button class="deactivate bg-red-500 text-white px-3 py-1 rounded mt-2" data-id="${r.id}">Deactivate Round</button>
+            </div>
+          </details>
+        `;
+        container.appendChild(div);
+      });
+
+      document.querySelectorAll(".update").forEach(btn => {
+        btn.onclick = async () => {
+          const id = btn.dataset.id;
+          const result = btn.parentElement.querySelector(".result").value;
+          await fetch(`/api/admin/match/${id}/result`, {
+            method: "PUT",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ result })
+          });
+          alert("Result updated!");
+        };
+      });
+
+      document.querySelectorAll(".deactivate").forEach(btn => {
+        btn.onclick = async () => {
+          const id = btn.dataset.id;
+          await fetch(`/api/admin/rounds/${id}/deactivate`, { method: "PUT" });
+          alert("Round deactivated!");
+          loadRounds();
+        };
+      });
     }
+
+    document.getElementById("newRoundForm").onsubmit = async e => {
+      e.preventDefault();
+      const matches = [...matchTable.children].map(r => ({
+        home_team: r.querySelector(".home").value,
+        away_team: r.querySelector(".away").value,
+        match_time: r.querySelector(".time").value
+      }));
+
+      const payload = {
+        name: document.getElementById("roundName").value,
+        start_time: document.getElementById("startTime").value,
+        end_time: document.getElementById("endTime").value,
+        matches
+      };
+
+      await fetch("/api/admin/rounds", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+      });
+
+      alert("New round created!");
+      e.target.reset();
+      loadRounds();
+    };
 
     loadRounds();
   </script>
 </body>
-  </html>
+</html>
