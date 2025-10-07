@@ -1,83 +1,95 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Admin | Jackpot Rounds</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 p-6">
-  <h1 class="text-2xl font-bold mb-4">🎯 Manage Jackpot Rounds</h1>
+  <h1 class="text-2xl font-bold mb-6">🎯 Admin — Jackpot Rounds</h1>
 
-  <!-- Create Round -->
-  <div class="bg-white p-4 rounded shadow mb-6">
-    <h2 class="text-lg font-semibold mb-2">Create New Round</h2>
-    <input id="roundName" class="border p-2 rounded w-64" placeholder="Round Name (e.g. Round 8)" />
-    <button onclick="createRound()" class="bg-blue-600 text-white px-4 py-2 rounded ml-2">Create</button>
-  </div>
+  <!-- Create New Round -->
+  <section class="bg-white p-4 rounded shadow mb-6">
+    <h2 class="font-semibold mb-3">Create New Round (with Matches)</h2>
+    <input id="roundName" class="border p-2 rounded w-64" placeholder="Round Name (e.g. Round 9)" />
+    <textarea id="matchesInput" class="border p-2 rounded w-full mt-3 h-32" placeholder='Enter matches, one per line:
+Arsenal vs Chelsea, 2025-10-09 18:00
+Liverpool vs Man City, 2025-10-10 20:00'></textarea>
+    <button onclick="createFullRound()" class="bg-blue-600 text-white px-4 py-2 rounded mt-3">Create Round</button>
+  </section>
 
-  <!-- Add Match -->
-  <div class="bg-white p-4 rounded shadow mb-6">
-    <h2 class="text-lg font-semibold mb-2">Add Match</h2>
-    <input id="roundId" class="border p-2 rounded w-20" placeholder="Round ID" />
-    <input id="homeTeam" class="border p-2 rounded w-40 ml-2" placeholder="Home Team" />
-    <input id="awayTeam" class="border p-2 rounded w-40 ml-2" placeholder="Away Team" />
-    <input id="matchTime" type="datetime-local" class="border p-2 rounded ml-2" />
-    <button onclick="addMatch()" class="bg-green-600 text-white px-4 py-2 rounded ml-2">Add</button>
-  </div>
+  <!-- Update All Results -->
+  <section class="bg-white p-4 rounded shadow mb-6">
+    <h2 class="font-semibold mb-3">Update All Results for a Round</h2>
+    <input id="updateRoundId" class="border p-2 rounded w-24" placeholder="Round ID" />
+    <textarea id="resultsInput" class="border p-2 rounded w-full mt-3 h-32" placeholder='Enter results (H, D, A) with match IDs:
+1 H
+2 D
+3 A'></textarea>
+    <button onclick="updateAllResults()" class="bg-yellow-600 text-white px-4 py-2 rounded mt-3">Update Results</button>
+  </section>
 
-  <!-- Update Result -->
-  <div class="bg-white p-4 rounded shadow mb-6">
-    <h2 class="text-lg font-semibold mb-2">Update Match Result</h2>
-    <input id="matchId" class="border p-2 rounded w-20" placeholder="Match ID" />
-    <select id="result" class="border p-2 rounded w-24 ml-2">
-      <option value="">Select</option>
-      <option value="H">Home Win</option>
-      <option value="D">Draw</option>
-      <option value="A">Away Win</option>
+  <!-- Deactivate Round -->
+  <section class="bg-white p-4 rounded shadow mb-6">
+    <h2 class="font-semibold mb-3">Activate / Deactivate Round</h2>
+    <input id="toggleRoundId" class="border p-2 rounded w-24" placeholder="Round ID" />
+    <select id="toggleStatus" class="border p-2 rounded ml-2">
+      <option value="true">Activate</option>
+      <option value="false">Deactivate</option>
     </select>
-    <button onclick="updateResult()" class="bg-yellow-600 text-white px-4 py-2 rounded ml-2">Update</button>
-  </div>
+    <button onclick="toggleRound()" class="bg-gray-700 text-white px-4 py-2 rounded ml-2">Update</button>
+  </section>
 
-  <button onclick="loadRounds()" class="bg-gray-800 text-white px-4 py-2 rounded mb-4">Refresh Rounds</button>
+  <button onclick="loadRounds()" class="bg-green-700 text-white px-4 py-2 rounded mb-4">Refresh Rounds</button>
   <div id="roundsList" class="space-y-4"></div>
 
   <script>
     const API = "/api/admin";
 
-    async function createRound() {
-      const name = document.getElementById("roundName").value;
-      const res = await fetch(`${API}/rounds`, {
+    async function createFullRound() {
+      const name = document.getElementById("roundName").value.trim();
+      const lines = document.getElementById("matchesInput").value.trim().split("\n");
+      const matches = lines.map(l => {
+        const [teams, time] = l.split(",");
+        const [home_team, away_team] = teams.split("vs").map(t => t.trim());
+        return { home_team, away_team, match_time: time.trim() };
+      });
+
+      await fetch(`${API}/rounds/full`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name })
+        body: JSON.stringify({ name, matches })
       });
-      alert("Round created!");
+      alert("✅ Round created with matches");
       loadRounds();
     }
 
-    async function addMatch() {
-      const round_id = +document.getElementById("roundId").value;
-      const home_team = document.getElementById("homeTeam").value;
-      const away_team = document.getElementById("awayTeam").value;
-      const match_time = document.getElementById("matchTime").value;
-      await fetch(`${API}/matches`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ round_id, home_team, away_team, match_time })
+    async function updateAllResults() {
+      const roundId = document.getElementById("updateRoundId").value;
+      const lines = document.getElementById("resultsInput").value.trim().split("\n");
+      const results = lines.map(l => {
+        const [match_id, result] = l.trim().split(" ");
+        return { match_id: +match_id, result };
       });
-      alert("Match added!");
-      loadRounds();
-    }
 
-    async function updateResult() {
-      const id = +document.getElementById("matchId").value;
-      const result = document.getElementById("result").value;
-      await fetch(`${API}/matches/${id}/result`, {
+      await fetch(`${API}/rounds/${roundId}/results`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ result })
+        body: JSON.stringify({ results })
       });
-      alert("Result updated!");
+      alert("✅ Results updated");
+      loadRounds();
+    }
+
+    async function toggleRound() {
+      const id = document.getElementById("toggleRoundId").value;
+      const is_active = document.getElementById("toggleStatus").value === "true";
+      await fetch(`${API}/rounds/${id}/active`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active })
+      });
+      alert("✅ Round status updated");
       loadRounds();
     }
 
@@ -87,12 +99,11 @@
       const div = document.getElementById("roundsList");
       div.innerHTML = data.map(r => `
         <div class="bg-white p-4 rounded shadow">
-          <h3 class="font-bold">${r.round_name} (ID: ${r.round_id}) ${r.is_active ? '🟢 Active' : ''}</h3>
+          <h3 class="font-bold">${r.name} (ID: ${r.round_id}) ${r.is_active ? '🟢 Active' : '🔴 Inactive'}</h3>
           <ul class="mt-2">
             ${r.matches?.map(m => `
-              <li class="border-b py-1">
-                ${m.home_team} vs ${m.away_team} — ${m.result ?? '⏳ Pending'}
-              </li>`).join("")}
+              <li>${m.id}. ${m.home_team} vs ${m.away_team} — <b>${m.result || 'Pending'}</b></li>
+            `).join("")}
           </ul>
         </div>
       `).join("");
@@ -101,4 +112,4 @@
     loadRounds();
   </script>
 </body>
-      </html>
+  </html>
