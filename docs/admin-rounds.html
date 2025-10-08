@@ -1,35 +1,126 @@
-<h2 class="text-2xl font-bold mb-4">Winning Tickets</h2>
-<table id="winners-table" class="min-w-full border border-gray-300 rounded-lg">
-  <thead class="bg-gray-100">
-    <tr>
-      <th class="px-4 py-2">User ID</th>
-      <th class="px-4 py-2">Username</th>
-      <th class="px-4 py-2">Round ID</th>
-      <th class="px-4 py-2">Round Name</th>
-      <th class="px-4 py-2">Ticket ID</th>
-      <th class="px-4 py-2">Date</th>
-    </tr>
-  </thead>
-  <tbody id="winners-body"></tbody>
-</table>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Rounds</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+  <h1 class="text-2xl font-bold mb-4">🏆 Jackpot Rounds</h1>
 
-<script>
-  async function loadWinningTickets() {
-    const res = await fetch('/api/admin/winning-tickets', {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    const data = await res.json();
-    const tbody = document.getElementById('winners-body');
-    tbody.innerHTML = data.map(row => `
-      <tr class="border-t">
-        <td class="px-4 py-2">${row.user_id}</td>
-        <td class="px-4 py-2">${row.username}</td>
-        <td class="px-4 py-2">${row.round_id}</td>
-        <td class="px-4 py-2">${row.round_name}</td>
-        <td class="px-4 py-2">${row.ticket_id}</td>
-        <td class="px-4 py-2">${new Date(row.created_at).toLocaleString()}</td>
-      </tr>
-    `).join('');
-  }
-  loadWinningTickets();
-      </script>
+  <div id="roundsContainer" class="space-y-3"></div>
+
+  <script>
+    async function fetchRounds() {
+      const res = await fetch("/api/admin/rounds");
+      const rounds = await res.json();
+
+      const container = document.getElementById("roundsContainer");
+      container.innerHTML = "";
+
+      if (rounds.length === 0) {
+        container.innerHTML = `<p class='text-gray-600'>No rounds found.</p>`;
+        return;
+      }
+
+      rounds.forEach(r => {
+        const div = document.createElement("div");
+        div.className = "bg-white p-4 rounded shadow";
+
+        const matchesContainerId = `matches-${r.id}`;
+
+        div.innerHTML = `
+          <div class="flex justify-between items-center cursor-pointer" onclick="toggleMatches(${r.id})">
+            <div>
+              <h2 class="text-lg font-semibold">${r.name}</h2>
+              <p class="text-sm text-gray-600">
+                Start: ${new Date(r.start_time).toLocaleString()} <br>
+                End: ${new Date(r.end_time).toLocaleString()}
+              </p>
+            </div>
+            <span class="${r.is_active ? 'text-green-600' : 'text-gray-500'} font-medium">
+              ${r.is_active ? 'Active' : 'Inactive'}
+            </span>
+          </div>
+          <div id="${matchesContainerId}" class="hidden mt-4 border-t pt-3"></div>
+        `;
+
+        container.appendChild(div);
+      });
+    }
+
+    async function toggleMatches(roundId) {
+      const container = document.getElementById(`matches-${roundId}`);
+
+      if (!container.classList.contains("hidden")) {
+        container.classList.add("hidden");
+        container.innerHTML = "";
+        return;
+      }
+
+      // Fetch matches
+      const res = await fetch(`/api/admin/rounds/${roundId}/matches`);
+      const matches = await res.json();
+
+      let html = `
+        <table class="min-w-full text-sm text-left border">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="p-2">ID</th>
+              <th class="p-2">Home</th>
+              <th class="p-2">Away</th>
+              <th class="p-2">Result</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      matches.forEach(m => {
+        html += `
+          <tr class="border-t">
+            <td class="p-2">${m.id}</td>
+            <td class="p-2">${m.home_team}</td>
+            <td class="p-2">${m.away_team}</td>
+            <td class="p-2">
+              <input type="text" maxlength="1" class="border p-1 w-12 text-center" value="${m.result || ''}" data-match-id="${m.id}" />
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `
+          </tbody>
+        </table>
+        <button onclick="updateResults(${roundId})" class="mt-3 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Update Results</button>
+      `;
+
+      container.innerHTML = html;
+      container.classList.remove("hidden");
+    }
+
+    async function updateResults(roundId) {
+      const container = document.getElementById(`matches-${roundId}`);
+      const inputs = container.querySelectorAll("input[data-match-id]");
+      const matches = Array.from(inputs).map(i => ({
+        id: Number(i.getAttribute("data-match-id")),
+        result: i.value.trim().toUpperCase()
+      }));
+
+      const res = await fetch(`/api/admin/rounds/${roundId}/update-results`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ matches })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        alert("✅ Results updated successfully!");
+      } else {
+        alert("❌ Error updating results.");
+      }
+    }
+
+    fetchRounds();
+  </script>
+</body>
+</html>
