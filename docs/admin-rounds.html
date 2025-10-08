@@ -2,125 +2,165 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Admin Rounds</title>
+  <title>Round Management | PremierPredict</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 p-6">
-  <h1 class="text-2xl font-bold mb-4">🏆 Jackpot Rounds</h1>
 
-  <div id="roundsContainer" class="space-y-3"></div>
+  <h1 class="text-3xl font-bold mb-6 text-center">Round Management</h1>
+
+  <div id="rounds-container" class="space-y-4"></div>
+
+  <!-- New Round Section -->
+  <div class="bg-white shadow-lg p-6 mt-10 rounded-lg">
+    <h2 class="text-2xl font-semibold mb-4">Create New Round</h2>
+    <input id="roundName" class="border p-2 rounded w-full mb-4" placeholder="Round Name (e.g. EPL Week 8)" />
+
+    <table class="w-full border mb-4">
+      <thead class="bg-gray-200">
+        <tr>
+          <th>Home Team</th>
+          <th>Away Team</th>
+          <th>Start Time</th>
+          <th>End Time</th>
+        </tr>
+      </thead>
+      <tbody id="newMatches"></tbody>
+    </table>
+    <button onclick="saveNewRound()" class="bg-green-600 text-white px-4 py-2 rounded">Save Round</button>
+  </div>
 
   <script>
-    async function fetchRounds() {
-      const res = await fetch("/api/admin/rounds");
+    const TEAMS = [
+      "Arsenal", "Aston Villa", "Bournemouth", "Brentford", "Brighton",
+      "Chelsea", "Crystal Palace", "Everton", "Fulham", "Ipswich",
+      "Leicester", "Liverpool", "Manchester City", "Manchester United",
+      "Newcastle", "Nottingham Forest", "Southampton", "Tottenham",
+      "West Ham", "Wolves"
+    ];
+
+    // Load existing rounds
+    async function loadRounds() {
+      const res = await fetch("/api/rounds");
       const rounds = await res.json();
 
-      const container = document.getElementById("roundsContainer");
+      const container = document.getElementById("rounds-container");
       container.innerHTML = "";
 
-      if (rounds.length === 0) {
-        container.innerHTML = `<p class='text-gray-600'>No rounds found.</p>`;
-        return;
-      }
-
       rounds.forEach(r => {
-        const div = document.createElement("div");
-        div.className = "bg-white p-4 rounded shadow";
+        const roundDiv = document.createElement("div");
+        roundDiv.className = "bg-white shadow-md rounded-lg p-4";
 
-        const matchesContainerId = `matches-${r.id}`;
-
-        div.innerHTML = `
-          <div class="flex justify-between items-center cursor-pointer" onclick="toggleMatches(${r.id})">
+        roundDiv.innerHTML = `
+          <div class="flex justify-between items-center">
+            <h2 class="text-xl font-semibold">${r.name} ${r.is_active ? "(Active)" : ""}</h2>
             <div>
-              <h2 class="text-lg font-semibold">${r.name}</h2>
-              <p class="text-sm text-gray-600">
-                Start: ${new Date(r.start_time).toLocaleString()} <br>
-                End: ${new Date(r.end_time).toLocaleString()}
-              </p>
+              <button onclick="activateRound(${r.id})" class="bg-blue-500 text-white px-2 py-1 rounded">Activate</button>
+              <button onclick="deactivateRound(${r.id})" class="bg-gray-500 text-white px-2 py-1 rounded">Deactivate</button>
             </div>
-            <span class="${r.is_active ? 'text-green-600' : 'text-gray-500'} font-medium">
-              ${r.is_active ? 'Active' : 'Inactive'}
-            </span>
           </div>
-          <div id="${matchesContainerId}" class="hidden mt-4 border-t pt-3"></div>
-        `;
 
-        container.appendChild(div);
+          <details class="mt-2">
+            <summary class="cursor-pointer text-gray-700">Show Matches</summary>
+            <table class="w-full mt-3 border">
+              <thead class="bg-gray-100">
+                <tr><th>ID</th><th>Home</th><th>Away</th><th>Result</th><th>Start</th><th>Match</th></tr>
+              </thead>
+              <tbody>
+                ${r.matches.map(m => `
+                  <tr>
+                    <td>${m.id}</td>
+                    <td><input class="border p-1 rounded" value="${m.home_team}" id="home_${m.id}"/></td>
+                    <td><input class="border p-1 rounded" value="${m.away_team}" id="away_${m.id}"/></td>
+                    <td><input class="border p-1 rounded" value="${m.result ?? ''}" id="result_${m.id}" placeholder="H/D/A"/></td>
+                    <td><input type="datetime-local" class="border p-1 rounded" id="start_${m.id}" value="${m.start_time ? m.start_time.slice(0,16) : ''}"/></td>
+                    <td><input type="datetime-local" class="border p-1 rounded" id="match_${m.id}" value="${m.match_time ? m.match_time.slice(0,16) : ''}"/></td>
+                  </tr>`).join("")}
+              </tbody>
+            </table>
+            <button onclick="updateMatches(${r.id})" class="mt-3 bg-green-600 text-white px-3 py-1 rounded">Update Matches</button>
+          </details>
+        `;
+        container.appendChild(roundDiv);
       });
     }
 
-    async function toggleMatches(roundId) {
-      const container = document.getElementById(`matches-${roundId}`);
+    async function updateMatches(roundId) {
+      const res = await fetch("/api/rounds");
+      const rounds = await res.json();
+      const round = rounds.find(r => r.id === roundId);
 
-      if (!container.classList.contains("hidden")) {
-        container.classList.add("hidden");
-        container.innerHTML = "";
-        return;
+      for (const m of round.matches) {
+        const payload = {
+          result: document.getElementById(`result_${m.id}`).value,
+          home_team: document.getElementById(`home_${m.id}`).value,
+          away_team: document.getElementById(`away_${m.id}`).value,
+          start_time: document.getElementById(`start_${m.id}`).value,
+          match_time: document.getElementById(`match_${m.id}`).value
+        };
+        await fetch(`/api/rounds/match/${m.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+      }
+      alert("Matches updated!");
+      loadRounds();
+    }
+
+    async function activateRound(id) {
+      await fetch(`/api/rounds/${id}/activate`, { method: "PUT" });
+      loadRounds();
+    }
+
+    async function deactivateRound(id) {
+      await fetch(`/api/rounds/${id}/deactivate`, { method: "PUT" });
+      loadRounds();
+    }
+
+    // Create new round form
+    function loadNewRoundForm() {
+      const tbody = document.getElementById("newMatches");
+      for (let i = 0; i < 10; i++) {
+        tbody.innerHTML += `
+          <tr>
+            <td>${teamDropdown("home_" + i)}</td>
+            <td>${teamDropdown("away_" + i)}</td>
+            <td><input type="datetime-local" id="start_${i}" class="border p-1 rounded"/></td>
+            <td><input type="datetime-local" id="end_${i}" class="border p-1 rounded"/></td>
+          </tr>`;
+      }
+    }
+
+    function teamDropdown(id) {
+      return `<select id="${id}" class="border p-1 rounded">${TEAMS.map(t => `<option>${t}</option>`).join("")}</select>`;
+    }
+
+    async function saveNewRound() {
+      const name = document.getElementById("roundName").value.trim();
+      const matches = [];
+
+      for (let i = 0; i < 10; i++) {
+        matches.push({
+          home_team: document.getElementById(`home_${i}`).value,
+          away_team: document.getElementById(`away_${i}`).value,
+          start_time: document.getElementById(`start_${i}`).value,
+          match_time: document.getElementById(`end_${i}`).value
+        });
       }
 
-      // Fetch matches
-      const res = await fetch(`/api/admin/rounds/${roundId}/matches`);
-      const matches = await res.json();
-
-      let html = `
-        <table class="min-w-full text-sm text-left border">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="p-2">ID</th>
-              <th class="p-2">Home</th>
-              <th class="p-2">Away</th>
-              <th class="p-2">Result</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-
-      matches.forEach(m => {
-        html += `
-          <tr class="border-t">
-            <td class="p-2">${m.id}</td>
-            <td class="p-2">${m.home_team}</td>
-            <td class="p-2">${m.away_team}</td>
-            <td class="p-2">
-              <input type="text" maxlength="1" class="border p-1 w-12 text-center" value="${m.result || ''}" data-match-id="${m.id}" />
-            </td>
-          </tr>
-        `;
-      });
-
-      html += `
-          </tbody>
-        </table>
-        <button onclick="updateResults(${roundId})" class="mt-3 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Update Results</button>
-      `;
-
-      container.innerHTML = html;
-      container.classList.remove("hidden");
-    }
-
-    async function updateResults(roundId) {
-      const container = document.getElementById(`matches-${roundId}`);
-      const inputs = container.querySelectorAll("input[data-match-id]");
-      const matches = Array.from(inputs).map(i => ({
-        id: Number(i.getAttribute("data-match-id")),
-        result: i.value.trim().toUpperCase()
-      }));
-
-      const res = await fetch(`/api/admin/rounds/${roundId}/update-results`, {
+      await fetch("/api/rounds/new", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ matches })
+        body: JSON.stringify({ name, matches })
       });
 
-      const data = await res.json();
-      if (data.success) {
-        alert("✅ Results updated successfully!");
-      } else {
-        alert("❌ Error updating results.");
-      }
+      alert("New round created!");
+      loadRounds();
     }
 
-    fetchRounds();
+    loadRounds();
+    loadNewRoundForm();
   </script>
 </body>
 </html>
