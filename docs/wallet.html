@@ -7,21 +7,49 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
   <script src="https://unpkg.com/feather-icons"></script>
+  <style>
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: #fff;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-around;
+      padding: 0.6rem 0;
+      z-index: 50;
+    }
+    .nav-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 0.75rem;
+      color: #6b7280;
+      transition: all 0.2s;
+    }
+    .nav-btn.active,
+    .nav-btn:hover {
+      color: #2563eb;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
-  <!-- Navbar -->
-  <nav class="bg-blue-700 text-white px-6 py-4 flex justify-between items-center shadow-md">
-    <h1 class="text-xl font-bold">PremierPredict</h1>
-    <button id="logoutBtn" class="bg-white text-blue-700 px-3 py-1 rounded-lg font-semibold hover:bg-gray-200 transition">
-      Logout
-    </button>
-  </nav>
+<body class="bg-gray-50 min-h-screen text-gray-800 pb-20">
+  <div class="container mx-auto px-4 py-6">
+    <!-- Header -->
+    <header class="flex justify-between items-center mb-6">
+      <div class="flex items-center space-x-2">
+        <i data-feather="credit-card" class="w-6 h-6 text-blue-600"></i>
+        <h1 class="text-2xl font-bold text-blue-600">My Wallet</h1>
+      </div>
+      <button id="logoutBtn" class="text-sm bg-blue-600 text-white px-3 py-1 rounded-lg shadow hover:bg-blue-700">
+        Logout
+      </button>
+    </header>
 
-  <!-- Wallet Section -->
-  <main class="flex-grow flex flex-col items-center justify-center p-6 space-y-6">
-    <div data-aos="fade-up" class="bg-white shadow-xl rounded-2xl p-8 w-full max-w-md text-center">
-      <h2 class="text-2xl font-bold text-gray-800 mb-4">My Wallet</h2>
-      
+    <!-- Wallet Card -->
+    <div data-aos="fade-up" class="bg-white rounded-xl shadow-md p-6 text-center">
+      <h2 class="text-gray-500 mb-2">Available Balance</h2>
+      <h1 id="balance" class="text-4xl font-extrabold text-blue-700 mb-6">₦0.00</h1>
+
       <!-- Spinner -->
       <div id="spinner" class="hidden mb-4">
         <svg class="animate-spin h-6 w-6 mx-auto text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -30,32 +58,47 @@
         </svg>
       </div>
 
-      <!-- Balance -->
-      <p class="text-gray-600 mb-2">Available Balance</p>
-      <h3 id="balance" class="text-4xl font-extrabold text-blue-700 mb-6">₦0.00</h3>
-
-      <!-- Deposit Form -->
-      <div class="flex flex-col items-center space-y-4">
+      <!-- Deposit Input -->
+      <div class="space-y-4">
         <input
           type="number"
           id="depositAmount"
           placeholder="Enter amount"
-          class="border border-gray-300 rounded-lg p-3 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+          class="border border-gray-300 rounded-lg p-3 w-full text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
           id="depositBtn"
-          class="bg-blue-700 hover:bg-blue-800 text-white px-6 py-3 rounded-lg font-semibold transition w-full"
+          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition"
         >
           Deposit with Paystack
         </button>
       </div>
     </div>
-  </main>
+  </div>
 
-  <!-- Footer -->
-  <footer class="bg-gray-800 text-gray-300 text-center py-4 text-sm">
-    © 2025 PremierPredict. All rights reserved.
-  </footer>
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="dashboard.html" class="nav-btn">
+      <i data-feather="home" class="w-5 h-5 mb-1"></i>
+      Home
+    </a>
+    <a href="bets.html" class="nav-btn">
+      <i data-feather="activity" class="w-5 h-5 mb-1"></i>
+      Bets
+    </a>
+    <a href="wallet.html" class="nav-btn active">
+      <i data-feather="credit-card" class="w-5 h-5 mb-1"></i>
+      Wallet
+    </a>
+    <a href="jackpot.html" class="nav-btn">
+      <i data-feather="gift" class="w-5 h-5 mb-1"></i>
+      Jackpot
+    </a>
+    <a href="profile.html" class="nav-btn">
+      <i data-feather="user" class="w-5 h-5 mb-1"></i>
+      Profile
+    </a>
+  </nav>
 
   <script>
     AOS.init();
@@ -74,15 +117,15 @@
       window.location.href = "index.html";
     });
 
-    // Format money as ₦
+    // Format money
     const formatMoney = (amount) =>
       "₦" + Number(amount).toLocaleString("en-NG", { minimumFractionDigits: 2 });
 
-    // ✅ Fetch wallet balance
+    // ✅ Load wallet balance
     async function loadWallet() {
       const token = getToken();
       if (!token) {
-        alert("⚠ Please login first.");
+        alert("Please login first.");
         window.location.href = "index.html";
         return;
       }
@@ -90,28 +133,21 @@
       try {
         showSpinner();
         const res = await fetch(`${API_URL}/wallet/balance`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
-
         const data = await res.json();
-        console.log("Balance response:", data);
-
         if (!res.ok) throw new Error(data.error || "Failed to fetch balance");
 
-        const amount = data.balance ? Number(data.balance) : 0;
-        document.getElementById("balance").innerText = formatMoney(amount);
+        document.getElementById("balance").innerText = formatMoney(data.balance || 0);
       } catch (err) {
-        console.error("❌ Wallet fetch error:", err);
-        alert("Error loading balance: " + err.message);
+        console.error("❌ Balance fetch error:", err);
+        alert("Error loading balance.");
       } finally {
         hideSpinner();
       }
     }
 
-    // ✅ Deposit Funds
+    // ✅ Deposit funds via Paystack
     async function depositFunds() {
       const token = getToken();
       const amount = parseFloat(document.getElementById("depositAmount").value);
@@ -133,8 +169,6 @@
         });
 
         const data = await res.json();
-        console.log("Deposit init:", data);
-
         if (data.authorizationUrl) {
           window.location.href = data.authorizationUrl;
         } else {
@@ -149,9 +183,7 @@
     }
 
     document.getElementById("depositBtn").addEventListener("click", depositFunds);
-
-    // Load wallet balance on page load
     loadWallet();
   </script>
 </body>
-</html>
+      </html>
