@@ -1,0 +1,19 @@
+workflows:
+  cordova-android:
+    name: Build Cordova Android APK
+    environment:
+      vars:
+        CORDOVA_PLATFORM: android
+      node: 18.16.0
+      java: 17
+    scripts:
+      - name: Install dependencies
+        script: |
+          npm install -g cordova
+          npm install
+      - name: Build APK
+        script: |
+          cordova platform add android
+          cordova build android --release
+    artifacts:
+      - platforms/android/app/build/outputs/**/*.apk
