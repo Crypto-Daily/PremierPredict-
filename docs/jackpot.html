@@ -98,7 +98,11 @@
   <script>
     AOS.init();
     feather.replace();
-    const API = "/api/jackpot";
+
+    // ✅ Use your Render backend URL
+    const BASE_URL = "https://premierpredict.onrender.com/api";
+    const API = `${BASE_URL}/jackpot`;
+
     const getToken = () => localStorage.getItem("token");
     const spinner = document.getElementById("spinner");
     const showSpinner = () => spinner.classList.remove("hidden");
@@ -106,62 +110,98 @@
 
     const formatMoney = (n) => "₦" + Number(n).toLocaleString("en-NG",{minimumFractionDigits:2});
 
-    async function loadBalance(){
-      const res = await fetch("/api/wallet/balance",{ headers:{Authorization:"Bearer "+getToken()} });
-      const data = await res.json();
-      document.getElementById("balanceBox").innerText = formatMoney(data.balance||0);
+    async function loadBalance() {
+      try {
+        const res = await fetch(`${BASE_URL}/wallet/balance`, { headers: { Authorization: "Bearer " + getToken() } });
+        if (!res.ok) throw new Error("Failed to fetch balance");
+        const data = await res.json();
+        document.getElementById("balanceBox").innerText = formatMoney(data.balance || 0);
+      } catch (err) {
+        console.error("Balance error:", err);
+        document.getElementById("balanceBox").innerText = "₦0.00";
+      }
     }
 
-    async function loadRound(){
+    async function loadRound() {
       showSpinner();
-      const res = await fetch(API,{ headers:{Authorization:"Bearer "+getToken()} });
-      const body = await res.json();
-      hideSpinner();
+      try {
+        const res = await fetch(API, { headers: { Authorization: "Bearer " + getToken() } });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const body = await res.json();
+        hideSpinner();
 
-      if(!body.matches){
-        document.getElementById("roundName").innerText = "No active round";
+        if (!body.matches || body.matches.length === 0) {
+          document.getElementById("roundName").innerText = "No active round";
+          document.getElementById("matches").innerHTML = "";
+          console.warn("No active round or matches found:", body);
+          return;
+        }
+
+        document.getElementById("roundName").innerText = `${body.name} (Round ${body.id})`;
+        document.getElementById("matches").innerHTML = body.matches.map(m => `
+          <div class="p-4 border rounded bg-white shadow">
+            <b>${m.home_team}</b> vs <b>${m.away_team}</b>
+            <div class="flex space-x-2 mt-2">
+              <label class="flex-1">
+                <input type="radio" name="m_${m.match_id}" value="H" class="hidden peer">
+                <div class="peer-checked:bg-blue-600 peer-checked:text-white text-center py-2 border rounded cursor-pointer">Home</div>
+              </label>
+              <label class="flex-1">
+                <input type="radio" name="m_${m.match_id}" value="D" class="hidden peer">
+                <div class="peer-checked:bg-blue-600 peer-checked:text-white text-center py-2 border rounded cursor-pointer">Draw</div>
+              </label>
+              <label class="flex-1">
+                <input type="radio" name="m_${m.match_id}" value="A" class="hidden peer">
+                <div class="peer-checked:bg-blue-600 peer-checked:text-white text-center py-2 border rounded cursor-pointer">Away</div>
+              </label>
+            </div>
+          </div>
+        `).join("");
+      } catch (err) {
+        hideSpinner();
+        console.error("Failed to load round:", err);
+        document.getElementById("roundName").innerText = "Error loading round";
+      }
+    }
+
+    document.getElementById("submitBtn").onclick = async () => {
+      const selections = [];
+      document.querySelectorAll("[name^='m_']").forEach(inp => {
+        if (inp.checked) selections.push({ match_id: Number(inp.name.split("_")[1]), selection: inp.value });
+      });
+
+      if (selections.length !== 10) {
+        alert("Please select all 10 predictions.");
         return;
       }
-      document.getElementById("roundName").innerText = body.name + " (Round "+body.id+")";
-      document.getElementById("matches").innerHTML = body.matches.map(m=>`
-        <div class="p-4 border rounded bg-white shadow">
-          <b>${m.home_team}</b> vs <b>${m.away_team}</b>
-          <div class="flex space-x-2 mt-2">
-            <label class="flex-1">
-              <input type="radio" name="m_${m.match_id}" value="H" class="hidden peer">
-              <div class="peer-checked:bg-blue-600 peer-checked:text-white text-center py-2 border rounded cursor-pointer">Home</div>
-            </label>
-            <label class="flex-1">
-              <input type="radio" name="m_${m.match_id}" value="D" class="hidden peer">
-              <div class="peer-checked:bg-blue-600 peer-checked:text-white text-center py-2 border rounded cursor-pointer">Draw</div>
-            </label>
-            <label class="flex-1">
-              <input type="radio" name="m_${m.match_id}" value="A" class="hidden peer">
-              <div class="peer-checked:bg-blue-600 peer-checked:text-white text-center py-2 border rounded cursor-pointer">Away</div>
-            </label>
-          </div>
-        </div>
-      `).join("");
-    }
 
-    document.getElementById("submitBtn").onclick = async()=>{
-      const selections=[];
-      document.querySelectorAll("[name^='m_']").forEach(inp=>{
-        if(inp.checked) selections.push({match_id:Number(inp.name.split("_")[1]),selection:inp.value});
-      });
-      if(selections.length!==10){ alert("Please select all 10 predictions."); return; }
       showSpinner();
-      const res = await fetch(API+"/bet",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+getToken()},body:JSON.stringify({selections})});
-      const data = await res.json();
-      hideSpinner();
-      if(res.ok){ alert("✅ Ticket placed!"); } else { alert("❌ "+(data.error||"Error")); }
-    }
+      try {
+        const res = await fetch(`${API}/bet`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+          body: JSON.stringify({ selections })
+        });
+        const data = await res.json();
+        hideSpinner();
 
-    (async()=>{
-      if(!getToken()){ location.href="index.html"; return; }
+        if (res.ok) {
+          alert("✅ Ticket placed!");
+        } else {
+          alert("❌ " + (data.error || "Error placing ticket."));
+        }
+      } catch (err) {
+        hideSpinner();
+        console.error("Ticket error:", err);
+        alert("❌ Network error placing ticket.");
+      }
+    };
+
+    (async () => {
+      if (!getToken()) { location.href = "index.html"; return; }
       await loadBalance();
       await loadRound();
     })();
   </script>
 </body>
-  </html>
+</html>
