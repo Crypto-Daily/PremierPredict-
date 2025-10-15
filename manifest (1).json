@@ -1,0 +1,15 @@
+{
+  "name": "PremierPredic",
+  "short_name": "PremierPredic",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#007bff",
+  "theme_color": "#007bff",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
