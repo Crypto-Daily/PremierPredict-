@@ -1,6 +1,6 @@
 {
-  "name": "PremierPredic",
-  "short_name": "PremierPredic",
+  "name": "PremierPredict",
+  "short_name": "PremierPredict",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#007bff",
