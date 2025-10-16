@@ -3,12 +3,12 @@
   "short_name": "PremierPredict",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#007bff",
+  "background_color": "white",
   "theme_color": "#007bff",
   "icons": [
     {
-      "src": "logo.png",
-      "sizes": "512x512",
+      "src": "Logo.png",
+      "sizes": "412x412",
       "type": "image/png"
     }
   ]
