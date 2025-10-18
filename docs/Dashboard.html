@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Matches | PremierPredict</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+  <style>
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #ffffff;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-around;
+      padding: 0.6rem 0;
+      z-index: 50;
+    }
+    .nav-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 0.75rem;
+      color: #6b7280;
+      transition: all 0.2s;
+    }
+    .nav-btn.active,
+    .nav-btn:hover {
+      color: #2563eb;
+    }
+
+    #spinner {
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      display: none;
+    }
+    #spinner div {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #2563eb;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen text-gray-800 pb-20">
+
+  <!-- Spinner -->
+  <div id="spinner"><div></div></div>
+
+  <!-- Header -->
+  <header class="flex justify-between items-center p-4 border-b bg-white">
+    <h1 class="text-lg font-bold text-blue-600 flex items-center space-x-2">
+      <i data-feather="tv" class="w-6 h-6 text-blue-600"></i>
+      <span>PremierPredict Live</span>
+    </h1>
+
+    <div class="flex items-center space-x-4">
+      <span id="username" class="font-bold text-gray-700">Loading...</span>
+      <span id="balance" class="font-semibold text-blue-600">₦0.00</span>
+    </div>
+  </header>
+
+  <!-- Live Matches -->
+  <main class="p-4">
+    <iframe
+      src="https://www.livesoccertv.com/en/competitions/england/premier-league/"
+      class="w-full h-[80vh] border rounded-lg shadow-sm"
+      loading="lazy"
+    ></iframe>
+  </main>
+
+  <!-- Footer -->
+  <footer class="mt-6 text-center text-xs text-gray-500 px-4">
+    <p>© 2025 PremierPredict. All rights reserved.</p>
+    <p class="mt-2">Age 18 and above only. Play responsibly.</p>
+    <div class="mt-2">
+      <a href="#" class="hover:underline">Terms & Conditions</a> | 
+      <a href="#" class="hover:underline">About Us</a>
+    </div>
+  </footer>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="dashboard.html" class="nav-btn">
+      <i data-feather="home" class="w-5 h-5 mb-1"></i>
+      Home
+    </a>
+    <a href="home-live.html" class="nav-btn active">
+      <i data-feather="tv" class="w-5 h-5 mb-1"></i>
+      Live
+    </a>
+    <a href="wallet.html" class="nav-btn">
+      <i data-feather="credit-card" class="w-5 h-5 mb-1"></i>
+      Wallet
+    </a>
+    <a href="jackpot.html" class="nav-btn">
+      <i data-feather="gift" class="w-5 h-5 mb-1"></i>
+      Jackpot
+    </a>
+    <a href="profile.html" class="nav-btn">
+      <i data-feather="user" class="w-5 h-5 mb-1"></i>
+      Profile
+    </a>
+  </nav>
+
+  <script>
+    AOS.init();
+    feather.replace();
+
+    const spinner = document.getElementById("spinner");
+    const showSpinner = () => spinner.style.display = "flex";
+    const hideSpinner = () => spinner.style.display = "none";
+
+    const API_URL = "https://premierpredict.onrender.com/api";
+    const getToken = () => localStorage.getItem("token");
+
+    const formatMoney = (amount) =>
+      "₦" + Number(amount).toLocaleString("en-NG", { minimumFractionDigits: 2 });
+
+    async function loadHeaderInfo() {
+      const token = getToken();
+      if (!token) return;
+
+      try {
+        showSpinner();
+        const res = await fetch(`${API_URL}/dashboard`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error("Bad response from server");
+        const data = await res.json();
+
+        document.getElementById("username").innerText = data.user?.username || "User";
+        document.getElementById("balance").innerText = formatMoney(data.balance || 0);
+      } catch (err) {
+        console.error("❌ Header fetch error:", err);
+      } finally {
+        hideSpinner();
+      }
+    }
+    loadHeaderInfo();
+  </script>
+</body>
+</html>
