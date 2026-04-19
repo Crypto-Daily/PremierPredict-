@@ -1,16 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <!-- ✅ PWA Integration -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#007bff">
-
-  <!-- Meta and title -->
-  <meta charset="UTF-8">
+  <meta name="theme-color" content="#007bff">  <!-- Meta and title -->  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - PremierPredic</title>
-
-  <style>
+  <title>Login - PremierPredic</title>  <style>
     :root {
       --primary: #007bff;
       --bg: #f5f5f5;
@@ -109,26 +103,46 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-  </style>
-</head>
 
-<body>
-  <div class="container">
-    <!-- Spinner -->
-    <div id="spinner"><div></div></div>
+    /* 🎥 Video Section */
+    .video-section {
+      max-width: 400px;
+      margin: 2rem auto;
+      background: var(--white);
+      padding: 1rem;
+      border-radius: var(--radius);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
 
-    <h2>Login</h2>
-    <input type="email" id="email" placeholder="Email" required>
-    <input type="password" id="password" placeholder="Password" required>
-    <button id="loginBtn">Login</button>
-    <p id="errorMsg" class="error"></p>
+    .video-section video {
+      width: 100%;
+      border-radius: var(--radius);
+    }
 
-    <div class="signup-link">
-      Don’t have an account? <a href="register.html">Register</a>
-    </div>
-  </div>
+    .fullscreen-btn {
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+  </style></head><body>  <!-- 🔐 Login -->  <div class="container">
+    <div id="spinner"><div></div></div><h2>Login</h2>
+<input type="email" id="email" placeholder="Email" required>
+<input type="password" id="password" placeholder="Password" required>
+<button id="loginBtn">Login</button>
+<p id="errorMsg" class="error"></p>
 
-  <script>
+<div class="signup-link">
+  Don’t have an account? <a href="register.html">Register</a>
+</div>
+
+  </div>  <!-- 🎥 Video Player -->  <div class="video-section">
+    <video id="videoPlayer" controls>
+      <source src="video.mp4" type="video/mp4">
+      Your browser does not support video playback.
+    </video><button id="fullscreenBtn" class="fullscreen-btn">
+  ⛶ Fullscreen
+</button>
+
+  </div>  <!-- 🔐 Login Script -->  <script>
     const API_URL = "https://premierpredict.onrender.com/api";
     const spinner = document.getElementById("spinner");
     const showSpinner = () => spinner.style.display = "flex";
@@ -155,7 +169,6 @@
         const data = await res.json();
 
         if (res.ok && data.token) {
-          // ✅ Save token and redirect
           localStorage.setItem("token", data.token);
           window.location.href = "dashboard.html";
         } else {
@@ -168,15 +181,24 @@
         hideSpinner();
       }
     });
-  </script>
+  </script>  <!-- 🎥 Fullscreen Script -->  <script>
+    const video = document.getElementById("videoPlayer");
+    const fullscreenBtn = document.getElementById("fullscreenBtn");
 
-  <!-- ✅ Register Service Worker for PWA -->
-  <script>
+    fullscreenBtn.addEventListener("click", () => {
+      if (video.requestFullscreen) {
+        video.requestFullscreen();
+      } else if (video.webkitRequestFullscreen) {
+        video.webkitRequestFullscreen();
+      } else if (video.msRequestFullscreen) {
+        video.msRequestFullscreen();
+      }
+    });
+  </script>  <!-- ✅ Service Worker -->  <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('service-worker.js')
         .then(() => console.log('Service Worker registered ✅'))
         .catch(err => console.log('Service Worker registration failed:', err));
     }
-  </script>
-</body>
+  </script></body>
 </html>
