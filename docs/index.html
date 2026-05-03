@@ -1,10 +1,16 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <!-- ✅ PWA Integration -->
+  <!-- ✅ PWA -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#007bff">  <!-- Meta and title -->  <meta charset="UTF-8">
+  <meta name="theme-color" content="#007bff">
+
+  <!-- Meta -->
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - PremierPredic</title>  <style>
+  <title>Login - PremierPredic</title>
+
+  <style>
     :root {
       --primary: #007bff;
       --bg: #f5f5f5;
@@ -54,7 +60,6 @@
       border-radius: var(--radius);
       font-size: 1rem;
       cursor: pointer;
-      transition: background 0.3s ease;
     }
 
     button:hover {
@@ -84,13 +89,13 @@
       position: absolute;
       inset: 0;
       background: rgba(255,255,255,0.7);
-      display: flex;
+      display: none;
       align-items: center;
       justify-content: center;
       z-index: 50;
-      display: none;
       border-radius: var(--radius);
     }
+
     #spinner div {
       border: 4px solid #f3f3f3;
       border-top: 4px solid var(--primary);
@@ -99,12 +104,12 @@
       height: 40px;
       animation: spin 1s linear infinite;
     }
+
     @keyframes spin {
-      0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
 
-    /* 🎥 Video Section */
+    /* Video */
     .video-section {
       max-width: 400px;
       margin: 2rem auto;
@@ -114,47 +119,61 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
 
-    .video-section video {
+    video {
       width: 100%;
       border-radius: var(--radius);
     }
 
     .fullscreen-btn {
-      width: 100%;
       margin-top: 0.5rem;
     }
-  </style></head><body>  <!-- 🔐 Login -->  <div class="container">
-    <div id="spinner"><div></div></div><h2>Login</h2>
-<input type="email" id="email" placeholder="Email" required>
-<input type="password" id="password" placeholder="Password" required>
-<button id="loginBtn">Login</button>
-<p id="errorMsg" class="error"></p>
+  </style>
+</head>
 
-<div class="signup-link">
-  Don’t have an account? <a href="register.html">Register</a>
-</div>
-<div class="video-section">
-  <video id="videoPlayer" controls>
-    <source src="VID_20260111_074904.mp4" type="video/mp4">
-    Your browser does not support the video tag.
-  </video>
+<body>
 
-  <button id="fullscreenBtn" class="fullscreen-btn">
-    Fullscreen
-  </button>
-</div>
-  
+  <div class="container">
+    <div id="spinner"><div></div></div>
 
-  </div>  <!-- 🔐 Login Script -->  <script>
+    <h2>Login</h2>
+
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+
+    <button id="loginBtn">Login</button>
+
+    <p id="errorMsg" class="error"></p>
+
+    <div class="signup-link">
+      Don’t have an account? <a href="register.html">Register</a>
+    </div>
+  </div>
+
+  <!-- 🎥 Local Video -->
+  <div class="video-section">
+    <video id="videoPlayer" controls>
+      <source src="VID_20260111_074904.mp4" type="video/mp4">
+      Your browser does not support video.
+    </video>
+
+    <button id="fullscreenBtn" class="fullscreen-btn">
+      Fullscreen
+    </button>
+  </div>
+
+  <script>
     const API_URL = "https://premierpredict.onrender.com/api";
+
     const spinner = document.getElementById("spinner");
     const showSpinner = () => spinner.style.display = "flex";
     const hideSpinner = () => spinner.style.display = "none";
 
-    document.getElementById("loginBtn").addEventListener("click", async () => {
+    const loginBtn = document.getElementById("loginBtn");
+    const errorMsg = document.getElementById("errorMsg");
+
+    loginBtn.addEventListener("click", async () => {
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
-      const errorMsg = document.getElementById("errorMsg");
 
       if (!email || !password) {
         errorMsg.textContent = "⚠ Please enter email and password.";
@@ -163,6 +182,7 @@
 
       try {
         showSpinner();
+
         const res = await fetch(`${API_URL}/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -177,14 +197,16 @@
         } else {
           errorMsg.textContent = data.error || "❌ Invalid login credentials.";
         }
+
       } catch (err) {
         console.error(err);
-        errorMsg.textContent = "❌ Error connecting to server.";
+        errorMsg.textContent = "❌ Server connection error.";
       } finally {
         hideSpinner();
       }
     });
-  </script>  <!-- 🎥 Fullscreen Script -->  <script>
+
+    // 🎥 Fullscreen
     const video = document.getElementById("videoPlayer");
     const fullscreenBtn = document.getElementById("fullscreenBtn");
 
@@ -197,11 +219,14 @@
         video.msRequestFullscreen();
       }
     });
-  </script>  <!-- ✅ Service Worker -->  <script>
+
+    // ✅ Service Worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('service-worker.js')
         .then(() => console.log('Service Worker registered ✅'))
-        .catch(err => console.log('Service Worker registration failed:', err));
+        .catch(err => console.log('Service Worker error:', err));
     }
-  </script></body>
+  </script>
+
+</body>
 </html>
